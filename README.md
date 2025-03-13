@@ -43,6 +43,18 @@ This command will move the starter code to the **app-example** directory and cre
 npm install @react-native-async-storage/async-storage
 ```
 
+2. Install expo-crypto and update dependencies
+
+```bash
+expo install expo-crypto
+```
+
+3. Install Ionicons
+
+```bash
+expo install @expo/vector-icons
+```
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:

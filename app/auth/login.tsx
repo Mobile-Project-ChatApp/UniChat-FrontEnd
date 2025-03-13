@@ -6,22 +6,44 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../../contexts/AuthContext";
+import { useRouter } from "expo-router";
 
 export default function Login() {
   const { login } = useContext(AuthContext);
-  const [username, setUsername] = useState("");
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={24} color="black" />
+      </TouchableOpacity>
+
       <Text style={styles.title}>Login</Text>
+
       <TextInput
         style={styles.input}
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
       />
-      <TouchableOpacity style={styles.button} onPress={() => login(username)}>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => login(email, password)}
+      >
         <Text style={styles.buttonText}>Sign In</Text>
       </TouchableOpacity>
     </View>
@@ -35,6 +57,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
   },
+
+  backButton: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+  },
+
   title: {
     fontSize: 24,
     fontWeight: "bold",

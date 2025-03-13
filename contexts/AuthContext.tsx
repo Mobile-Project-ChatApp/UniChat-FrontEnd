@@ -1,14 +1,18 @@
 import React, { createContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import User from "../types/Users"; // Import User interface
-import users from "../hardcodedData/users";
+import * as Crypto from "expo-crypto";
+import User from "../types/Users";
 
 type AuthContextType = {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  login: (username: string) => Promise<void>;
-  register: (username: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (newUser: {
+    username: string;
+    email: string;
+    password: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -22,48 +26,80 @@ export const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const storedUser = await AsyncStorage.getItem("user");
-        console.log("Loaded user from AsyncStorage:", storedUser);
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Failed to load user:", error);
-      }
-    };
-    loadUser();
-  }, []);
+    console.log("Current user:", user);
+  }, [user]);
 
-  const login = async (username: string) => {
-    const foundUser = users.find((u) => u.username === username);
-    if (foundUser) {
-      console.log("Logging in user:", foundUser);
-      setUser(foundUser);
-      await AsyncStorage.setItem("user", JSON.stringify(foundUser));
-      router.replace("/(tabs)");
-    } else {
-      alert("User not found!");
+  const login = async (email: string, password: string) => {
+    if (users.length === 0) {
+      alert("No users found! Please register.");
+      return;
     }
+
+    const foundUser = users.find((u: User) => u.email === email);
+
+    if (!foundUser) {
+      alert("User not found!");
+      return;
+    }
+
+    const passwordHash = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      password
+    );
+
+    if (foundUser.passwordHash !== passwordHash) {
+      alert("Incorrect password!");
+      return;
+    }
+
+    setUser(foundUser);
+    router.replace("/(tabs)");
   };
 
-  const register = async (username: string) => {
+  // Register a new user
+  const register = async ({
+    username,
+    email,
+    password,
+  }: {
+    username: string;
+    email: string;
+    password: string;
+  }) => {
+    if (password.length < 8) {
+      alert("Password must be at least 8 characters long!");
+      return;
+    }
+
+    const passwordHash = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      password
+    );
+
     const newUser: User = {
       username,
-      avatar: require("../assets/images/avatar/default-avatar.jpeg"),
+      email,
+      passwordHash,
+      profilePicture: require("../assets/images/avatar/default-avatar.jpeg"),
+      createdAt: new Date().toISOString(),
     };
-    users.push(newUser);
-    await login(username);
+
+    if (users.some((u) => u.email === email)) {
+      alert("Email already exists! Please login.");
+      return;
+    }
+
+    setUsers([...users, newUser]);
+    alert("Registration successful! Please log in.");
+    router.replace("/auth/login");
   };
 
+  // Logout the user
   const logout = async () => {
-    await AsyncStorage.removeItem("user");
     setUser(null);
     router.replace("/WelcomeScreen");
   };

@@ -46,7 +46,7 @@ export default function HomeScreen() {
       <Header
         username={user?.username ?? "Guest"}
         avatar={
-          user?.avatar ?? require("@/assets/images/avatar/default-avatar.jpeg")
+          user?.profilePicture ?? require("@/assets/images/avatar/default-avatar.jpeg")
         }
       />
 

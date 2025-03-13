@@ -39,10 +39,12 @@ export default function Chatroom() {
 
     <View style={styles.container}>
       {/* HEADER */}
+      <SafeAreaView>
       <View style={styles.header}>
         <Image source={{ uri: icon }} style={styles.icon} />
         <Text style={styles.title}>{title}</Text>
       </View>
+      </SafeAreaView>
 
       {/* MESSAGES */}
       <FlatList

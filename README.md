@@ -35,6 +35,26 @@ npm run reset-project
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
+## Dependencies
+
+1. Install Async Storage (for persistent login)
+
+```bash
+npm install @react-native-async-storage/async-storage
+```
+
+2. Install expo-crypto and update dependencies
+
+```bash
+expo install expo-crypto
+```
+
+3. Install Ionicons
+
+```bash
+expo install @expo/vector-icons
+```
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:
@@ -48,4 +68,5 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
 # UniChat-FrontEnd

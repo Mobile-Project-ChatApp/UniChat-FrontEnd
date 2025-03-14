@@ -1,10 +1,12 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://localhost:5/api/users";
+const API_BASE_URL = "http://10.10.17.235";
+
+const API_URL = `${API_BASE_URL}:5222/api/users`;
 
 export const registerUser = async (username, email, passwordHash) => {
-  return axios.post(`${API_URL}/register`, { username, email, passwordHash });
+  return axios.post(`${API_URL}`, { username, email, passwordHash });
 };
 
 // Login user and store JWT token

@@ -23,15 +23,15 @@ export default function Register() {
       Alert.alert("Error", "All fields are required.");
       return;
     }
+
     register({ username, email, password });
-    router.replace("/auth/login"); // Redirect to login after registration
+    router.replace("/auth/login");
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create an Account</Text>
 
-      {/* Username Input */}
       <Text style={styles.label}>Username</Text>
       <TextInput
         style={styles.input}
@@ -40,7 +40,6 @@ export default function Register() {
         onChangeText={setUsername}
       />
 
-      {/* Email Input */}
       <Text style={styles.label}>Email</Text>
       <TextInput
         style={styles.input}
@@ -51,7 +50,6 @@ export default function Register() {
         autoCapitalize="none"
       />
 
-      {/* Password Input */}
       <Text style={styles.label}>Password</Text>
       <TextInput
         style={styles.input}
@@ -61,11 +59,10 @@ export default function Register() {
         secureTextEntry
       />
 
-      {/* Create Account Button */}
       <TouchableOpacity
         style={[
           styles.button,
-          (!username || !email || !password) && styles.disabledButton, // Disable button if fields are empty
+          (!username || !email || !password) && styles.disabledButton,
         ]}
         disabled={!username || !email || !password}
         onPress={handleRegister}
@@ -73,7 +70,6 @@ export default function Register() {
         <Text style={styles.buttonText}>Create Account</Text>
       </TouchableOpacity>
 
-      {/* Already Have an Account */}
       <Text style={styles.signInText}>
         Already have an account?{" "}
         <TouchableOpacity onPress={() => router.push("/auth/login")}>

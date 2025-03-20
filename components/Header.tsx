@@ -16,7 +16,7 @@ export default function Header({
   avatar,
 }: {
   username: string;
-  avatar: ImageSourcePropType; // Accept both `require()` and URLs
+  avatar: ImageSourcePropType;
 }) {
   return (
     <View style={styles.container}>

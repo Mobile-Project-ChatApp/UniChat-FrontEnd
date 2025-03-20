@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as Crypto from "expo-crypto";
+import { registerUser } from "../api/userApi";
 import User from "../types/Users";
 
 type AuthContextType = {
@@ -75,27 +75,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    const passwordHash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      password
-    );
-
-    const newUser: User = {
-      username,
-      email,
-      passwordHash,
-      profilePicture: require("../assets/images/avatar/default-avatar.jpeg"),
-      createdAt: new Date().toISOString(),
-    };
-
-    if (users.some((u) => u.email === email)) {
-      alert("Email already exists! Please login.");
-      return;
+    try {
+      const response = await registerUser(username, email, password); // Call backend API
+      alert("Registration successful! Please log in.");
+      router.replace("/auth/login"); // Redirect to login page
+    } catch (error: any) {
+      console.error("Registration failed:", error);
+      alert(error.response?.data.message || "Registration failed.");
     }
-
-    setUsers([...users, newUser]);
-    alert("Registration successful! Please log in.");
-    router.replace("/auth/login");
   };
 
   // Logout the user

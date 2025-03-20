@@ -17,6 +17,20 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
 
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert("Email and password are required.");
+      return;
+    }
+
+    try {
+      await login(email, password);
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Login failed. Please try again.");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome Back!</Text>
@@ -67,7 +81,7 @@ export default function Login() {
       <TouchableOpacity
         style={[styles.button, (!email || !password) && styles.disabledButton]}
         disabled={!email || !password}
-        onPress={() => login(email, password)}
+        onPress={handleLogin}
       >
         <Text style={styles.buttonText}>Sign In</Text>
       </TouchableOpacity>

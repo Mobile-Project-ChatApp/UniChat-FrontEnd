@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import * as Crypto from "expo-crypto";
-import { registerUser } from "../api/userApi";
+import { registerUser, loginUser, fetchUserProfile } from "../api/userApi";
 import User from "../types/Users";
 
 type AuthContextType = {
@@ -33,31 +33,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("Current user:", user);
   }, [user]);
 
+  useEffect(() => {
+    // Auto-login if token exists
+    const loadUser = async () => {
+      const token = await AsyncStorage.getItem("authToken");
+      if (token) {
+        try {
+          const response = await fetchUserProfile();
+          setUser(response.data);
+        } catch (error) {
+          console.error("Failed to load user:", error);
+          await AsyncStorage.removeItem("authToken");
+        }
+      }
+    };
+    loadUser();
+  }, []);
+
   const login = async (email: string, password: string) => {
-    if (users.length === 0) {
-      alert("No users found! Please register.");
-      return;
+    try {
+      const token = await loginUser(email, password); // API call
+      const response = await fetchUserProfile(); // Fetch user details
+      setUser(response.data);
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      alert(error.response?.data.message || "Login failed.");
     }
-
-    const foundUser = users.find((u: User) => u.email === email);
-
-    if (!foundUser) {
-      alert("User not found!");
-      return;
-    }
-
-    const passwordHash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      password
-    );
-
-    if (foundUser.passwordHash !== passwordHash) {
-      alert("Incorrect password!");
-      return;
-    }
-
-    setUser(foundUser);
-    router.replace("/(tabs)");
   };
 
   // Register a new user
@@ -76,7 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      const response = await registerUser(username, email, password); // Call backend API
+      await registerUser(username, email, password); // Call backend API
       alert("Registration successful! Please log in.");
       router.replace("/auth/login"); // Redirect to login page
     } catch (error: any) {
@@ -87,6 +89,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Logout the user
   const logout = async () => {
+    await AsyncStorage.removeItem("authToken");
     setUser(null);
     router.replace("/WelcomeScreen");
   };

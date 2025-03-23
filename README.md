@@ -55,6 +55,12 @@ expo install expo-crypto
 expo install @expo/vector-icons
 ```
 
+4.
+
+```bash
+npx expo install react-native-toast-message
+```
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:

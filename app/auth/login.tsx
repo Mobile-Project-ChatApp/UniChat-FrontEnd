@@ -5,164 +5,159 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import BouncyCheckbox from "react-native-bouncy-checkbox";
+import { showToast } from "@/utils/showToast";
 import { useRouter } from "expo-router";
 import { AuthContext } from "../../contexts/AuthContext";
 
 export default function Login() {
   const { login } = useContext(AuthContext);
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      alert("Email and password are required.");
+      showToast("error", "Missing Fields", "Please enter both email and password.");
       return;
     }
 
     try {
+      setLoading(true);
       await login(email, password);
     } catch (error) {
       console.error("Login error:", error);
-      alert("Login failed. Please try again.");
+      showToast("error", "Login failed", "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back!</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.container}
+    >
+      <View style={styles.formContainer}>
+        <Text style={styles.title}>Welcome Back 👋</Text>
 
-      <Text style={styles.subText}>
-        Don't have an account yet?{" "}
-        <TouchableOpacity onPress={() => router.push("/auth/register")}>
-          <Text style={styles.signUpText}>Register</Text>
-        </TouchableOpacity>
-      </Text>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-
-      <View style={styles.rowContainer}>
-        <View style={styles.checkboxContainer}>
-          <BouncyCheckbox
-            isChecked={keepLoggedIn}
-            onPress={() => setKeepLoggedIn(!keepLoggedIn)}
-            fillColor="#4A69BD"
-            text="Keep me logged in"
-            textStyle={{ color: "#333", textDecorationLine: "none" }}
-            size={16}
-          />
+        <View style={styles.forgotPasswordContainer}>
+          <Text style={styles.forgotPassword}>Forgot your password?</Text>
+          <TouchableOpacity onPress={() => router.push("/auth/forgotPassword")}>
+            <Text style={styles.clickText}>Click here</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={() => router.push("/auth/forgotPassword")}>
-          <Text style={styles.forgotPassword}>Forgot Password?</Text>
-        </TouchableOpacity>
-      </View>
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#4A69BD"
+            style={{ marginTop: 20 }}
+          />
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.button,
+              (!email || !password) && styles.disabledButton,
+            ]}
+            disabled={!email || !password}
+            onPress={handleLogin}
+          >
+            <Text style={styles.buttonText}>Sign In</Text>
+          </TouchableOpacity>
+        )}
 
-      {/* Sign In Button */}
-      <TouchableOpacity
-        style={[styles.button, (!email || !password) && styles.disabledButton]}
-        disabled={!email || !password}
-        onPress={handleLogin}
-      >
-        <Text style={styles.buttonText}>Sign In</Text>
-      </TouchableOpacity>
-    </View>
+        <View style={styles.bottomTextContainer}>
+          <Text style={styles.subText}>Don't have an account?</Text>
+          <TouchableOpacity onPress={() => router.push("/auth/register")}>
+            <Text style={styles.clickText}> Register</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 20,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+
+  formContainer: {
+    width: "100%",
+    maxWidth: 400,
+    alignSelf: "center",
   },
 
   title: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 10,
-  },
-
-  subText: {
-    color: "#333",
-    fontSize: 14,
-    marginBottom: 20,
-  },
-
-  signUpText: {
-    color: "#4A69BD",
-    fontWeight: "bold",
-    textDecorationLine: "underline",
+    marginBottom: 24,
+    textAlign: "center",
   },
 
   label: {
     color: "#333",
-    alignSelf: "flex-start",
-    marginBottom: 5,
+    marginBottom: 6,
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
 
   input: {
     width: "100%",
     padding: 12,
-    marginBottom: 15,
+    marginBottom: 16,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
   },
 
-  rowContainer: {
-    width: "100%",
+  forgotPasswordContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 20,
-    flexWrap: "wrap",
-  },
-
-  checkboxContainer: {
-    flexDirection: "row",
-    //alignItems: "center",
-    flex: 1,
+    //justifyContent: "flex-end",
   },
 
   forgotPassword: {
-    color: "#4A69BD",
     fontSize: 14,
-    textDecorationLine: "underline",
-    textAlign: "right",
-    flexShrink: 1,
+    color: "#333",
+    //fontWeight: "600",
   },
 
   button: {
     backgroundColor: "#f2f9d9",
     padding: 14,
     borderRadius: 8,
-    width: "100%",
     alignItems: "center",
   },
 
@@ -174,5 +169,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+  },
+
+  bottomTextContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+
+  subText: {
+    fontSize: 14,
+    color: "#333",
+  },
+
+  clickText: {
+    color: "#4A69BD",
+    fontSize: 14,
+    fontWeight: "bold",
+    textDecorationLine: "underline",
   },
 });

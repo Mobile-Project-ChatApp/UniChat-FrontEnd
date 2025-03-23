@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import Toast from "react-native-toast-message";
 import { Stack, useRouter } from "expo-router";
 import { AuthProvider, AuthContext } from "../contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -49,6 +50,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
         )}
       </Stack>
+      <Toast />
     </AuthProvider>
   );
 }

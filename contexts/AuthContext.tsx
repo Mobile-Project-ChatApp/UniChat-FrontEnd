@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { showToast } from "@/utils/showToast";
 import { useRouter } from "expo-router";
 import { registerUser, loginUser, fetchUserProfile } from "../api/userApi";
 import User from "../types/Users";
@@ -50,16 +51,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loadUser();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    try {
-      const token = await loginUser(email, password); // API call
-      const response = await fetchUserProfile(); // Fetch user details
-      setUser(response.data);
-      router.replace("/(tabs)");
-    } catch (error: any) {
-      console.error("Login failed:", error);
-      alert(error.response?.data.message || "Login failed.");
-    }
+  const isValidEmail = (email: string) => {
+    return email.endsWith("@oamk.fi") || email.endsWith("@fontys.nl");
   };
 
   // Register a new user
@@ -72,18 +65,62 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     email: string;
     password: string;
   }) => {
+    if (!isValidEmail(email)) {
+      showToast(
+        "error",
+        "Invalid Email",
+        "Email must be an OAMK or Fontys email."
+      );
+      router.replace("/WelcomeScreen");
+      return;
+    }
+
     if (password.length < 8) {
-      alert("Password must be at least 8 characters long!");
+      showToast(
+        "error",
+        "Weak Password",
+        "Password must be at least 8 characters."
+      );
+      router.replace("/WelcomeScreen");
       return;
     }
 
     try {
       await registerUser(username, email, password); // Call backend API
-      alert("Registration successful! Please log in.");
+      showToast("success", "Registration successful!", "You can now log in.");
       router.replace("/auth/login"); // Redirect to login page
     } catch (error: any) {
       console.error("Registration failed:", error);
-      alert(error.response?.data.message || "Registration failed.");
+      showToast(
+        "error",
+        "Registration failed",
+        error.response?.data.message || "Please try again."
+      );
+      router.replace("/WelcomeScreen");
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    if (!isValidEmail(email)) {
+      showToast(
+        "error",
+        "Invalid Email",
+        "Email must be an OAMK or Fontys email."
+      );
+      router.replace("/WelcomeScreen");
+      return;
+    }
+
+    try {
+      const token = await loginUser(email, password); // API call
+      const response = await fetchUserProfile(); // Fetch user details
+      setUser(response.data);
+      showToast("success", "Login successful!", "Welcome back 👋");
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      showToast("error", "Login failed", "Incorrect email or password.");
+      router.replace("/WelcomeScreen");
     }
   };
 

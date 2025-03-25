@@ -4,6 +4,8 @@ import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
 import { AuthContext } from "@/contexts/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
@@ -42,7 +44,7 @@ export default function HomeScreen() {
   ];
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={styles.container}>
       <Header
         username={user?.username ?? "Guest"}
         avatar={
@@ -50,11 +52,93 @@ export default function HomeScreen() {
         }
       />
 
-      <SearchBar />
+      <Text style={styles.header}>Chats</Text>
+      
+      <View style={styles.searchContainer}>
+        <SearchBar />
+      </View>
+      
+      <View style={styles.filterContainer}>
+        <TouchableOpacity style={[styles.filterButton, styles.filterButtonActive]}>
+          <Text style={styles.filterButtonTextActive}>All Chats</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterButtonText}>Recent</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterButtonText}>Favorites</Text>
+        </TouchableOpacity>
+      </View>
 
-      {Groups.map((group) => (
-        <Chat key={group.id} title={group.title} icon={group.icon} />
-      ))}
+      <ScrollView style={styles.scrollContainer}>
+        <View style={styles.chatListContainer}>
+          {Groups.map((group) => (
+            <View key={group.id} style={styles.chatItemContainer}>
+              <Chat title={group.title} icon={group.icon} />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginHorizontal: 20,
+    marginVertical: 15,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  filterButtonActive: {
+    backgroundColor: '#4A90E2',
+  },
+  filterButtonText: {
+    color: '#666',
+    fontWeight: '500',
+  },
+  filterButtonTextActive: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  chatListContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 5,
+    paddingBottom: 20,
+  },
+  chatItemContainer: {
+    marginBottom: 15,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    overflow: 'hidden',
+    borderWidth: 0,
+  },
+});

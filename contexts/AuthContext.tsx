@@ -22,12 +22,12 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  setUser: () => {},
-  login: async () => {},
-  register: async () => {},
-  logout: async () => {},
+  setUser: () => { },
+  login: async () => { },
+  register: async () => { },
+  logout: async () => { },
   verificationEmail: null,
-  setVerificationEmail: () => {},
+  setVerificationEmail: () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -63,7 +63,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return (
       email.endsWith("@oamk.fi") ||
       email.endsWith("@students.oamk.fi") ||
-      email.endsWith("@fontys.nl")
+      email.endsWith("@fontys.nl") ||
+      email.endsWith("@student.fontys.nl")
     );
   };
 

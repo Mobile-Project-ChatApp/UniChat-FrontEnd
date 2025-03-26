@@ -15,6 +15,9 @@ type AuthContextType = {
     password: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
+
+  verificationEmail: string | null;
+  setVerificationEmail: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -23,10 +26,15 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
+  verificationEmail: null,
+  setVerificationEmail: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(
+    null
+  );
   const [users, setUsers] = useState<User[]>([]);
   const router = useRouter();
 
@@ -52,7 +60,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const isValidEmail = (email: string) => {
-    return email.endsWith("@oamk.fi") || email.endsWith("@fontys.nl");
+    return (
+      email.endsWith("@oamk.fi") ||
+      email.endsWith("@students.oamk.fi") ||
+      email.endsWith("@fontys.nl")
+    );
   };
 
   // Register a new user
@@ -86,9 +98,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      await registerUser(username, email, password); // Call backend API
-      showToast("success", "Registration successful!", "You can now log in.");
-      router.replace("/auth/login"); // Redirect to login page
+      await registerUser(username, email, password); // Call backend API, Backend sends email with code
+      setVerificationEmail(email);
+      showToast(
+        "success",
+        "Registration successful!",
+        "Please verify your email."
+      );
+      //router.replace("/auth/emailVerification"); // Redirect to verify email screen
+      router.replace("/auth/login");
     } catch (error: any) {
       console.error("Registration failed:", error);
       showToast(
@@ -132,7 +150,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        login,
+        register,
+        logout,
+        verificationEmail,
+        setVerificationEmail,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

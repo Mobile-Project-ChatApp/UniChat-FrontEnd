@@ -5,8 +5,9 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { showToast } from "@/utils/showToast";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useRouter } from "expo-router";
 
@@ -17,21 +18,34 @@ export default function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!username || !email || !password) {
-      Alert.alert("Error", "All fields are required.");
+      showToast("error", "Missing Fields", "Please fill in all fields.");
       return;
     }
-    register({ username, email, password });
-    router.replace("/auth/login"); // Redirect to login after registration
+
+    try {
+      setLoading(true);
+      await register({ username, email, password });
+    } catch (error) {
+      console.error("Register error:", error);
+      showToast(
+        "error",
+        "Unexpected Error",
+        "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
+      //router.replace("/auth/login");
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create an Account</Text>
 
-      {/* Username Input */}
       <Text style={styles.label}>Username</Text>
       <TextInput
         style={styles.input}
@@ -40,7 +54,6 @@ export default function Register() {
         onChangeText={setUsername}
       />
 
-      {/* Email Input */}
       <Text style={styles.label}>Email</Text>
       <TextInput
         style={styles.input}
@@ -51,7 +64,6 @@ export default function Register() {
         autoCapitalize="none"
       />
 
-      {/* Password Input */}
       <Text style={styles.label}>Password</Text>
       <TextInput
         style={styles.input}
@@ -61,25 +73,31 @@ export default function Register() {
         secureTextEntry
       />
 
-      {/* Create Account Button */}
-      <TouchableOpacity
-        style={[
-          styles.button,
-          (!username || !email || !password) && styles.disabledButton, // Disable button if fields are empty
-        ]}
-        disabled={!username || !email || !password}
-        onPress={handleRegister}
-      >
-        <Text style={styles.buttonText}>Create Account</Text>
-      </TouchableOpacity>
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#4A69BD"
+          style={{ marginTop: 20 }}
+        />
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.button,
+            (!username || !email || !password) && styles.disabledButton,
+          ]}
+          disabled={!username || !email || !password}
+          onPress={handleRegister}
+        >
+          <Text style={styles.buttonText}>Create Account</Text>
+        </TouchableOpacity>
+      )}
 
-      {/* Already Have an Account */}
-      <Text style={styles.signInText}>
-        Already have an account?{" "}
+      <View style={styles.bottomTextContainer}>
+        <Text style={styles.signInText}>Already have an account? </Text>
         <TouchableOpacity onPress={() => router.push("/auth/login")}>
           <Text style={styles.signInLink}>Sign In</Text>
         </TouchableOpacity>
-      </Text>
+      </View>
     </View>
   );
 }
@@ -137,14 +155,20 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
+  bottomTextContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+
   signInText: {
-    marginTop: 20,
     fontSize: 14,
     color: "#333",
   },
 
   signInLink: {
     color: "#4A69BD",
+    fontSize: 14,
     fontWeight: "bold",
     textDecorationLine: "underline",
   },

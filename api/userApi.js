@@ -18,10 +18,6 @@ export const registerUser = async (username, email, passwordHash) => {
   });
 };
 
-export const verifyEmailCode = async (email, code) => {
-  return axiosInstance.post(`${API_URL}/verify-email`, { email, code });
-};
-
 export const loginUser = async (email, password) => {
   const response = await axiosInstance.post(`${API_URL_LOG}/login`, {
     email,
@@ -43,9 +39,17 @@ export const refreshToken = async (token) => {
   return response.data.refreshToken;
 };
 
-export const fetchUserProfile = async () => {
-  return axiosInstance.get(`${API_URL_LOG}/profile`);
+export const fetchUserProfile = async (accessToken) => {
+  return axiosInstance.get(`${API_URL_LOG}/profile`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 };
+
+// export const verifyEmailCode = async (email, code) => {
+//   return axiosInstance.post(`${API_URL}/verify-email`, { email, code });
+// };
 
 // Test connection function to debug connectivity issues
 export const testConnection = async () => {

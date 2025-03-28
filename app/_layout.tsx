@@ -13,7 +13,6 @@ export default function RootLayout() {
     const checkAuth = async () => {
       try {
         const storedUser = await AsyncStorage.getItem("user");
-        console.log("Stored User in AsyncStorage:", storedUser);
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         } else {
@@ -54,12 +53,3 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
-
-//Wrap the entire app inside `AuthProvider`
-// export default function Layout() {
-//   return (
-//     <AuthProvider>
-//       <RootLayout />
-//     </AuthProvider>
-//   );
-// }

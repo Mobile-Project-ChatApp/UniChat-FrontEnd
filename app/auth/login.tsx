@@ -19,12 +19,15 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      showToast("error", "Missing Fields", "Please enter both email and password.");
+      showToast(
+        "error",
+        "Missing Fields",
+        "Please enter both email and password."
+      );
       return;
     }
 
@@ -33,7 +36,11 @@ export default function Login() {
       await login(email, password);
     } catch (error) {
       console.error("Login error:", error);
-      showToast("error", "Login failed", "Something went wrong. Please try again.");
+      showToast(
+        "error",
+        "Login failed",
+        "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -95,7 +102,7 @@ export default function Login() {
         <View style={styles.bottomTextContainer}>
           <Text style={styles.subText}>Don't have an account?</Text>
           <TouchableOpacity onPress={() => router.push("/auth/register")}>
-            <Text style={styles.clickText}> Register</Text>
+            <Text style={styles.clickText}> Sign Up</Text>
           </TouchableOpacity>
         </View>
       </View>

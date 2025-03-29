@@ -1,31 +1,12 @@
 import axios, { AxiosInstance } from "axios";
 import { Platform } from 'react-native';
-
-// Get the appropriate base URL based on platform
-const getBaseUrl = () => {
-  console.log(`Platform: ${Platform.OS}`); // Debug log
-  
-  if (Platform.OS === 'android') {
-    console.log('Using Android configuration');
-    // For Android emulator or physical device, use your actual computer's IP address
-    return "http://192.168.1.104:5222"; // Replace with your computer's IP address
-  } else if (Platform.OS === 'ios') {
-    console.log('Using iOS configuration');
-    // For iOS simulators, use your computer's IP address instead of localhost
-    return "http://192.168.1.104:5222"; // Replace with your computer's IP address
-  } else {
-    console.log('Using web configuration');
-    // Web or fallback
-    return "http://localhost:5222";
-  }
-};
+import { API_BASE_URL } from "../config/apiConfig"; // Import API_BASE_URL
 
 // Log the selected base URL for debugging
-const baseUrl = getBaseUrl();
-console.log(`Selected base URL: ${baseUrl}`);
+console.log(`Using API base URL: ${API_BASE_URL}`);
 
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: baseUrl,
+  baseURL: API_BASE_URL, // Use imported API_BASE_URL
   withCredentials: true,
   timeout: 20000, // Increased timeout to 20 seconds
   headers: {
@@ -61,9 +42,9 @@ axiosInstance.interceptors.response.use(
     } else if (error.request) {
       console.error("No response received from server");
       console.error("Request details:", {
+        baseURL: error.config?.baseURL,
         url: error.config?.url,
-        method: error.config?.method,
-        baseURL: error.config?.baseURL
+        method: error.config?.method
       });
     } else {
       console.error("Error setting up request:", error.message);

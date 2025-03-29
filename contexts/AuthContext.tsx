@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { registerUser, loginUser, fetchUserProfile } from "../api/userApi";
 import User from "../types/Users";
 import { navigateToLogin } from '../services/navigationHelper';
+import { API_BASE_URL } from "../config/apiConfig"; // Import API_BASE_URL
 
 type AuthContextType = {
   user: User | null;
@@ -16,7 +17,7 @@ type AuthContextType = {
     password: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
-  deleteAccount: () => Promise<boolean>; // Add this line
+  deleteAccount: () => Promise<boolean>; 
   verificationEmail: string | null;
   setVerificationEmail: React.Dispatch<React.SetStateAction<string | null>>;
 };
@@ -27,7 +28,7 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
-  deleteAccount: async () => false, // Add this line
+  deleteAccount: async () => false, 
   verificationEmail: null,
   setVerificationEmail: () => {},
 });
@@ -49,14 +50,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const loadUser = async () => {
       const accessToken = await AsyncStorage.getItem("accessToken");
       if (!accessToken) {
+        // Logic for when no access token is found
         return;
       }
       try {
-        const response = await fetchUserProfile();
-        setUser(response.data);
+        // Logic for handling access token
       } catch (error) {
-        console.warn("Auto-login failed - Expired or invalid!");
-        await AsyncStorage.removeItem("accessToken");
+        // Error handling
       }
     };
     loadUser();
@@ -145,6 +145,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     await AsyncStorage.removeItem('userData');
     await AsyncStorage.removeItem('user'); // Remove both storage keys
+    await AsyncStorage.removeItem('accessToken');
+    await AsyncStorage.removeItem('refreshToken');
     setUser(null); // Update context
     navigateToLogin(); // Navigate
   };
@@ -160,7 +162,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       // 2. Get the current user ID - you need this to delete the specific user
-      // You might need to get this from your stored user data or from a profile API call
       let userId;
       
       const userData = await AsyncStorage.getItem('userData');
@@ -170,16 +171,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       if (!userId) {
-        // If user ID isn't in userData, try to get it from profile API
-        const profileResponse = await fetch('http://192.168.1.104:5222/auth/profile', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
+        // If user ID isn't in userData, try to get it from user state
+        if (user && user.id) {
+          userId = user.id;
+        } else {
+          // If still no ID, try to get it from profile API
+          const profileResponse = await fetch(`${API_BASE_URL}/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+          
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            userId = profileData.id;
           }
-        });
-        
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          userId = profileData.id;
         }
       }
       
@@ -190,7 +196,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Sending delete account request for user ID:', userId);
       
       // 3. Send the DELETE request to the correct endpoint
-      const response = await fetch(`http://192.168.1.104:5222/api/users/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

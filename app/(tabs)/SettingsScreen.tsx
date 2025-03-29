@@ -10,40 +10,22 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { ThemeContext } from '../../contexts/ThemeContext';
 
 export default function SettingsScreen() {
-  const [user, setUser] = useState<User | null>(null);
   const [onlineStatus, setOnlineStatus] = useState(true);
   const [privateProfile, setPrivateProfile] = useState(false);
   const [language, setLanguage] = useState('English');
   
-  // Use the global context values
-  const { logout, deleteAccount } = useContext(AuthContext);
+  const { user: authUser, logout, deleteAccount } = useContext(AuthContext);
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-
+  
   const navigation = useNavigation<AppNavigationProp>();
-
+  
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('userData');
-        console.log('User data from AsyncStorage:', userData);
-        
-        if (userData) {
-          const parsedData = JSON.parse(userData);
-          console.log('Parsed user data:', parsedData);
-          setUser(parsedData);
-          
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUserData();
-  }, []);
+    console.log('Current authUser:', authUser);
+  }, [authUser]);
 
   const handleLogOut = async () => {
     try {
-      logout(); // Call the context method
+      logout();
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -84,21 +66,19 @@ export default function SettingsScreen() {
         quality: 1,
       });
 
-      if (!result.canceled && user) {
-        const updatedUser = { ...user, profilePicture: result.assets[0].uri };
-        setUser(updatedUser);
+      if (!result.canceled && authUser) {
+        const updatedUser = { ...authUser, profilePicture: result.assets[0].uri };
+        
+        await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
         await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+        Alert.alert("Success", "Profile picture updated successfully!");
       }
     } catch (error) {
       console.error('Error picking image:', error);
+      Alert.alert("Error", "Failed to update profile picture.");
     }
   };
   
-  // Debug log
-  useEffect(() => {
-    console.log('Current user state:', user);
-  }, [user]);
-
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
       <Text style={[styles.header, darkMode && styles.darkText]}>Settings</Text>
@@ -108,7 +88,7 @@ export default function SettingsScreen() {
           <TouchableOpacity onPress={pickImage}>
             <Image 
               source={{ 
-                uri: user?.profilePicture || 'https://example.com/default-avatar.jpg' 
+                uri: authUser?.profilePicture || "@/assets/images/avatar/default-avatar.jpeg" 
               }} 
               style={styles.profileImage} 
             />
@@ -117,7 +97,7 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
           <Text style={[styles.username, darkMode && styles.darkText]}>
-            {user?.username || 'User'}
+            {authUser?.username || "Guest"}
           </Text>
           <TouchableOpacity style={styles.editNameButton}>
             <Text style={styles.editNameText}>Edit Name</Text>
@@ -156,7 +136,6 @@ export default function SettingsScreen() {
             title="Language"
             value={language}
             onPress={() => {
-              /* Show language picker */
               Alert.alert('Language', 'Language selection coming soon!');
             }}
             icon="globe"
@@ -166,7 +145,7 @@ export default function SettingsScreen() {
             title="Dark Mode"
             isToggle={true}
             isOn={darkMode}
-            onPress={toggleDarkMode} // Now using context's toggleDarkMode
+            onPress={toggleDarkMode}
             icon="contrast"
             darkMode={darkMode}
           />
@@ -247,7 +226,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#e1e1e1', // Placeholder color
+    backgroundColor: '#e1e1e1',
   },
   cameraIconContainer: {
     position: 'absolute',

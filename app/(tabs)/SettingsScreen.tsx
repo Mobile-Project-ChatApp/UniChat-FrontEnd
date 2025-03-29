@@ -6,17 +6,18 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { User, SettingItemProps, AppNavigationProp } from '../../types/types';
-import { navigateToLogin } from '../../services/navigationHelper';
 import { AuthContext } from '../../contexts/AuthContext';
-
+import { ThemeContext } from '../../contexts/ThemeContext';
 
 export default function SettingsScreen() {
   const [user, setUser] = useState<User | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
   const [onlineStatus, setOnlineStatus] = useState(true);
   const [privateProfile, setPrivateProfile] = useState(false);
   const [language, setLanguage] = useState('English');
+  
+  // Use the global context values
   const { logout, deleteAccount } = useContext(AuthContext);
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
   const navigation = useNavigation<AppNavigationProp>();
 
@@ -24,13 +25,13 @@ export default function SettingsScreen() {
     const fetchUserData = async () => {
       try {
         const userData = await AsyncStorage.getItem('userData');
-        console.log('User data from AsyncStorage:', userData); // Debug log
+        console.log('User data from AsyncStorage:', userData);
         
         if (userData) {
           const parsedData = JSON.parse(userData);
-          console.log('Parsed user data:', parsedData); // Debug log
+          console.log('Parsed user data:', parsedData);
           setUser(parsedData);
-          setDarkMode(parsedData.darkMode || false);
+          
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -39,25 +40,6 @@ export default function SettingsScreen() {
 
     fetchUserData();
   }, []);
-
-  const toggleDarkMode = async () => {
-    try {
-      const newDarkMode = !darkMode;
-      setDarkMode(newDarkMode);
-      
-      // Update user object
-      if (user) {
-        const updatedUser = { ...user, darkMode: newDarkMode };
-        setUser(updatedUser);
-        
-        // Save to AsyncStorage
-        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
-        console.log('Dark mode updated:', newDarkMode); // Debug log
-      }
-    } catch (error) {
-      console.error('Error toggling dark mode:', error);
-    }
-  };
 
   const handleLogOut = async () => {
     try {
@@ -184,7 +166,7 @@ export default function SettingsScreen() {
             title="Dark Mode"
             isToggle={true}
             isOn={darkMode}
-            onPress={toggleDarkMode}
+            onPress={toggleDarkMode} // Now using context's toggleDarkMode
             icon="contrast"
             darkMode={darkMode}
           />

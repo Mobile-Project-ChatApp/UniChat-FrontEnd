@@ -3,12 +3,14 @@ import Chat from "@/components/Chat";
 import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
 import { AuthContext } from "@/contexts/AuthContext";
+import { ThemeContext } from "@/contexts/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
+  const { darkMode } = useContext(ThemeContext);
 
   const Groups = [
     {
@@ -44,37 +46,41 @@ export default function HomeScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
       <Header
         username={user?.username ?? "Guest"}
         avatar={
           user?.profilePicture ?? require("@/assets/images/avatar/default-avatar.jpeg")
         }
+        darkMode={darkMode}
       />
 
-      <Text style={styles.header}>Chats</Text>
+      <Text style={[styles.header, darkMode && styles.darkText]}>Chats</Text>
       
       <View style={styles.searchContainer}>
-        <SearchBar />
+        <SearchBar darkMode={darkMode} />
       </View>
       
       <View style={styles.filterContainer}>
         <TouchableOpacity style={[styles.filterButton, styles.filterButtonActive]}>
           <Text style={styles.filterButtonTextActive}>All Chats</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterButtonText}>Recent</Text>
+        <TouchableOpacity style={[styles.filterButton, darkMode && styles.darkFilterButton]}>
+          <Text style={[styles.filterButtonText, darkMode && styles.darkFilterButtonText]}>Recent</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterButtonText}>Favorites</Text>
+        <TouchableOpacity style={[styles.filterButton, darkMode && styles.darkFilterButton]}>
+          <Text style={[styles.filterButtonText, darkMode && styles.darkFilterButtonText]}>Favorites</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.chatListContainer}>
           {Groups.map((group) => (
-            <View key={group.id} style={styles.chatItemContainer}>
-              <Chat title={group.title} icon={group.icon} />
+            <View key={group.id} style={[
+              styles.chatItemContainer, 
+              darkMode && styles.darkChatItemContainer
+            ]}>
+              <Chat title={group.title} icon={group.icon} darkMode={darkMode} />
             </View>
           ))}
         </View>
@@ -88,6 +94,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  darkContainer: {
+    backgroundColor: '#121212',
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -96,6 +105,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginHorizontal: 20,
     marginVertical: 15,
+    color: '#000',
+  },
+  darkText: {
+    color: '#fff',
   },
   searchContainer: {
     paddingHorizontal: 20,
@@ -113,12 +126,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#f0f0f0',
   },
+  darkFilterButton: {
+    backgroundColor: '#333',
+  },
   filterButtonActive: {
     backgroundColor: '#4A90E2',
   },
   filterButtonText: {
     color: '#666',
     fontWeight: '500',
+  },
+  darkFilterButtonText: {
+    color: '#ccc',
   },
   filterButtonTextActive: {
     color: 'white',
@@ -133,12 +152,19 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: '#fff',
     borderRadius: 12,
+    borderWidth: 1,  // Add border width
+    borderColor: '#e0e0e0',  // Light gray border for light mode
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
     overflow: 'hidden',
-    borderWidth: 0,
+  },
+  darkChatItemContainer: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',  // Darker border for dark mode
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
   },
 });

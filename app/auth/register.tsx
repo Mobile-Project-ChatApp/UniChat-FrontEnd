@@ -10,6 +10,15 @@ import {
 import { showToast } from "@/utils/showToast";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useRouter } from "expo-router";
+import { ThemeContext } from '../../contexts/ThemeContext';
+import { createThemedStyles } from '../../assets/ThemeStyle';
+
+export const useTheme = () => {
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const styles = createThemedStyles(darkMode);
+  
+  return { darkMode, toggleDarkMode, styles };
+};
 
 export default function Register() {
   const { register } = useContext(AuthContext);

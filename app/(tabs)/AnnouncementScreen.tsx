@@ -1,8 +1,12 @@
-import React from 'react'
-import { SafeAreaView, Text, View, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import React, { useContext } from 'react';
+import { SafeAreaView, Text, View, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../../contexts/ThemeContext';
 
 export default function AnnouncementScreen() {
+  // Get dark mode status from ThemeContext
+  const { darkMode } = useContext(ThemeContext);
+
   const announcements = [
     {
       id: 1,
@@ -44,7 +48,10 @@ export default function AnnouncementScreen() {
   }
 
   const AnnouncementItem = ({ announcement }: { announcement: Announcement }) => (
-    <View style={styles.announcementItem}>
+    <View style={[
+      styles.announcementItem,
+      darkMode && styles.darkAnnouncementItem
+    ]}>
       {announcement.important && (
         <View style={styles.importantBanner}>
           <Ionicons name="warning" size={16} color="white" />
@@ -52,41 +59,80 @@ export default function AnnouncementScreen() {
         </View>
       )}
       <View style={styles.announcementHeader}>
-        <Text style={styles.announcementTitle}>{announcement.title}</Text>
-        <Text style={styles.announcementDate}>{announcement.date}</Text>
+        <Text style={[
+          styles.announcementTitle,
+          darkMode && styles.darkText
+        ]}>{announcement.title}</Text>
+        <Text style={[
+          styles.announcementDate,
+          darkMode && styles.darkSecondaryText
+        ]}>{announcement.date}</Text>
       </View>
-      <Text style={styles.announcementContent}>{announcement.content}</Text>
+      <Text style={[
+        styles.announcementContent,
+        darkMode && styles.darkText
+      ]}>{announcement.content}</Text>
       <View style={styles.senderInfo}>
         <Image source={{ uri: announcement.senderAvatar }} style={styles.senderAvatar} />
-        <Text style={styles.senderName}>From: {announcement.sender}</Text>
+        <Text style={[
+          styles.senderName,
+          darkMode && styles.darkSecondaryText
+        ]}>From: {announcement.sender}</Text>
       </View>
-      <View style={styles.actionButtons}>
+      <View style={[
+        styles.actionButtons,
+        darkMode && styles.darkBorder
+      ]}>
         <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="bookmark-outline" size={20} color="#4A90E2" />
-          <Text style={styles.actionButtonText}>Save</Text>
+          <Ionicons name="bookmark-outline" size={20} color={darkMode ? "#82B1FF" : "#4A90E2"} />
+          <Text style={[
+            styles.actionButtonText,
+            darkMode && styles.darkActionButtonText
+          ]}>Save</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="share-outline" size={20} color="#4A90E2" />
-          <Text style={styles.actionButtonText}>Share</Text>
+          <Ionicons name="share-outline" size={20} color={darkMode ? "#82B1FF" : "#4A90E2"} />
+          <Text style={[
+            styles.actionButtonText,
+            darkMode && styles.darkActionButtonText
+          ]}>Share</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Announcements</Text>
+    <SafeAreaView style={[
+      styles.container,
+      darkMode && styles.darkContainer
+    ]}>
+      <Text style={[
+        styles.header,
+        darkMode && styles.darkText
+      ]}>Announcements</Text>
       
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.filterContainer}>
           <TouchableOpacity style={[styles.filterButton, styles.filterButtonActive]}>
             <Text style={styles.filterButtonTextActive}>All</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterButtonText}>Important</Text>
+          <TouchableOpacity style={[
+            styles.filterButton,
+            darkMode && styles.darkFilterButton
+          ]}>
+            <Text style={[
+              styles.filterButtonText,
+              darkMode && styles.darkFilterButtonText
+            ]}>Important</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterButtonText}>Recent</Text>
+          <TouchableOpacity style={[
+            styles.filterButton,
+            darkMode && styles.darkFilterButton
+          ]}>
+            <Text style={[
+              styles.filterButtonText,
+              darkMode && styles.darkFilterButtonText
+            ]}>Recent</Text>
           </TouchableOpacity>
         </View>
 
@@ -95,13 +141,16 @@ export default function AnnouncementScreen() {
         ))}
       </ScrollView>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  darkContainer: {
+    backgroundColor: '#121212',
   },
   scrollContainer: {
     flex: 1,
@@ -111,6 +160,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginHorizontal: 20,
     marginVertical: 15,
+    color: '#000',
+  },
+  darkText: {
+    color: '#fff',
+  },
+  darkSecondaryText: {
+    color: '#aaa',
   },
   filterContainer: {
     flexDirection: 'row',
@@ -124,12 +180,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#f0f0f0',
   },
+  darkFilterButton: {
+    backgroundColor: '#333',
+  },
   filterButtonActive: {
     backgroundColor: '#4A90E2',
   },
   filterButtonText: {
     color: '#666',
     fontWeight: '500',
+  },
+  darkFilterButtonText: {
+    color: '#ccc',
   },
   filterButtonTextActive: {
     color: 'white',
@@ -148,6 +210,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  darkAnnouncementItem: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
   },
   importantBanner: {
     flexDirection: 'row',
@@ -174,6 +242,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
+    color: '#000',
   },
   announcementDate: {
     fontSize: 12,
@@ -207,6 +276,9 @@ const styles = StyleSheet.create({
     borderTopColor: '#f0f0f0',
     paddingTop: 10,
   },
+  darkBorder: {
+    borderTopColor: '#333',
+  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -216,5 +288,8 @@ const styles = StyleSheet.create({
     color: '#4A90E2',
     marginLeft: 5,
     fontSize: 14,
+  },
+  darkActionButtonText: {
+    color: '#82B1FF',
   }
 });

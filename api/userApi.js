@@ -32,6 +32,13 @@ export const loginUser = async (email, password) => {
   };
 };
 
+export const resetPassword = async (email, newPassword) => {
+  return axiosInstance.post(`${API_URL_LOG}/reset-password`, {
+    email,
+    password: newPassword,
+  });
+};
+
 export const refreshToken = async (token) => {
   const response = await axiosInstance.post(`${API_URL_LOG}/refresh`, {
     refreshToken: token,

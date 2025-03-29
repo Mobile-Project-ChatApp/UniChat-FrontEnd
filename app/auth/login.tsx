@@ -102,7 +102,7 @@ export default function Login() {
         <View style={styles.bottomTextContainer}>
           <Text style={styles.subText}>Don't have an account?</Text>
           <TouchableOpacity onPress={() => router.push("/auth/register")}>
-            <Text style={styles.clickText}> Sign Up</Text>
+            <Text style={styles.clickText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </View>

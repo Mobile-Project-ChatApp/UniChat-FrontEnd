@@ -4,6 +4,7 @@ import { showToast } from "@/utils/showToast";
 import { useRouter } from "expo-router";
 import { registerUser, loginUser, fetchUserProfile } from "../api/userApi";
 import User from "../types/Users";
+import { navigateToLogin } from '../services/navigationHelper';
 
 type AuthContextType = {
   user: User | null;
@@ -141,9 +142,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Logout the user
   const logout = async () => {
-    await AsyncStorage.removeItem("authToken");
-    setUser(null);
-    router.replace("/WelcomeScreen");
+    await AsyncStorage.removeItem('userData');
+    await AsyncStorage.removeItem('user'); // Remove both storage keys
+    setUser(null); // Update context
+    navigateToLogin(); // Navigate
   };
 
   return (

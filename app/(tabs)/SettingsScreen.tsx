@@ -16,7 +16,7 @@ export default function SettingsScreen() {
   const [onlineStatus, setOnlineStatus] = useState(true);
   const [privateProfile, setPrivateProfile] = useState(false);
   const [language, setLanguage] = useState('English');
-  const { logout } = useContext(AuthContext);
+  const { logout, deleteAccount } = useContext(AuthContext);
 
   const navigation = useNavigation<AppNavigationProp>();
 
@@ -78,13 +78,14 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await AsyncStorage.removeItem('userData');
-              Alert.alert('Account Deleted', 'Your account has been deleted.');
-              
-              // Use the helper function
-              navigateToLogin();
+              await deleteAccount();
+              Alert.alert('Success', 'Your account has been deleted.');
             } catch (error) {
-              console.error('Error deleting account:', error);
+              if (error instanceof Error) {
+                Alert.alert('Error', error.message || 'Failed to delete account.');
+              } else {
+                Alert.alert('Error', 'Failed to delete account.');
+              }
             }
           },
         },

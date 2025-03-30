@@ -28,12 +28,8 @@ export default function ForgotPassword() {
 
     try {
       setLoading(true);
-      await resetPassword;
-      showToast(
-        "success",
-        "Email Sent",
-        "Password reset successfully. Please log in."
-      );
+      await resetPassword(email, password);
+      showToast("success", "Password reset successfully. ", "Please log in.");
       router.replace("/auth/login");
     } catch (error) {
       console.error("Reset error:", error);

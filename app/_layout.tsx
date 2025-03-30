@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from "react";
 import Toast from "react-native-toast-message";
 import { Stack, useRouter } from "expo-router";
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { AuthProvider, AuthContext } from "../contexts/AuthContext";
-import { ThemeProvider, ThemeContext } from '../contexts/ThemeContext';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
+import { AuthProvider, AuthContext } from "../contexts/AuthContext";
+import { ThemeProvider, ThemeContext } from "../contexts/ThemeContext";
+import { fetchUserProfile } from "../api/userApi";
 
 // Wrapper component to access the context values
 function MainLayout() {
@@ -21,11 +26,12 @@ function MainLayout() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        const token = await AsyncStorage.getItem("accessToken");
+        if (!token) {
+          setUser(null);
         } else {
-          setUser(null); // ensure welcome screen is shown if no user is found
+          const profileRes = await fetchUserProfile(token);
+          setUser(profileRes.data); // ensure welcome screen is shown if no user is found
         }
       } catch (error) {
         console.error("Error loading user:", error);
@@ -39,26 +45,30 @@ function MainLayout() {
   useEffect(() => {
     if (!loading && !user) {
       console.log("Redirecting to WelcomeScreen");
-      router.replace("/WelcomeScreen"); // Redirect to Welcome Screen when user is null
+      router.replace("/WelcomeScreen");
     }
   }, [user, loading]);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: darkMode ? '#121212' : '#FFFFFF' }} />
+      <View
+        style={{ flex: 1, backgroundColor: darkMode ? "#121212" : "#FFFFFF" }}
+      />
     );
   }
 
   return (
     <NavigationThemeProvider value={navigationTheme}>
-      <StatusBar style={darkMode ? 'light' : 'dark'} />
-      <Stack screenOptions={{ 
-        headerShown: false,
-        // Apply theme colors to stack navigator
-        contentStyle: { 
-          backgroundColor: darkMode ? '#121212' : '#FFFFFF' 
-        }
-      }}>
+      <StatusBar style={darkMode ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          // Apply theme colors to stack navigator
+          contentStyle: {
+            backgroundColor: darkMode ? "#121212" : "#FFFFFF",
+          },
+        }}
+      >
         {!user ? (
           <>
             <Stack.Screen name="WelcomeScreen" />
@@ -70,7 +80,6 @@ function MainLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="Chatroom" />
           </>
-          
         )}
       </Stack>
       <Toast />

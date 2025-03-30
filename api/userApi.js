@@ -6,11 +6,6 @@ const API_URL_REG = "/api/users";
 const API_URL_LOG = "/auth";
 
 export const registerUser = async (username, email, passwordHash) => {
-  console.log("registerUser call:", {
-    username,
-    email,
-    passwordHash,
-  });
   return axiosInstance.post(`${API_URL_REG}`, {
     username,
     email,
@@ -25,11 +20,17 @@ export const loginUser = async (email, password) => {
   });
 
   const { accessToken, refreshToken } = response.data;
-  //console.log("loginUser response:", response.data);
   return {
     refreshToken,
     accessToken,
   };
+};
+
+export const resetPassword = async (email, newPassword) => {
+  return axiosInstance.post(`${API_URL_LOG}/reset-password`, {
+    email,
+    password: newPassword,
+  });
 };
 
 export const refreshToken = async (token) => {

@@ -1,13 +1,22 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Toast from "react-native-toast-message";
 import { Stack, useRouter } from "expo-router";
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { AuthProvider, AuthContext } from "../contexts/AuthContext";
+import { ThemeProvider, ThemeContext } from '../contexts/ThemeContext';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StatusBar } from 'expo-status-bar';
+import { View } from "react-native";
 
-export default function RootLayout() {
-  const { user, setUser } = useContext(AuthContext);
+// Wrapper component to access the context values
+function MainLayout() {
+  const { user, setUser } = React.useContext(AuthContext);
+  const { darkMode } = React.useContext(ThemeContext);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Apply the selected theme to the navigation
+  const navigationTheme = darkMode ? DarkTheme : DefaultTheme;
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -30,15 +39,26 @@ export default function RootLayout() {
   useEffect(() => {
     if (!loading && !user) {
       console.log("Redirecting to WelcomeScreen");
-      router.replace("/WelcomeScreen"); //Redirect to Welcome Screen when user is null
+      router.replace("/WelcomeScreen"); // Redirect to Welcome Screen when user is null
     }
   }, [user, loading]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: darkMode ? '#121212' : '#FFFFFF' }} />
+    );
+  }
 
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
+    <NavigationThemeProvider value={navigationTheme}>
+      <StatusBar style={darkMode ? 'light' : 'dark'} />
+      <Stack screenOptions={{ 
+        headerShown: false,
+        // Apply theme colors to stack navigator
+        contentStyle: { 
+          backgroundColor: darkMode ? '#121212' : '#FFFFFF' 
+        }
+      }}>
         {!user ? (
           <>
             <Stack.Screen name="WelcomeScreen" />
@@ -46,10 +66,25 @@ export default function RootLayout() {
             <Stack.Screen name="auth/register" />
           </>
         ) : (
-          <Stack.Screen name="(tabs)" />
+          <>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="Chatroom" />
+          </>
+          
         )}
       </Stack>
       <Toast />
+    </NavigationThemeProvider>
+  );
+}
+
+// Root component that provides all the context providers
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <MainLayout />
+      </ThemeProvider>
     </AuthProvider>
   );
 }

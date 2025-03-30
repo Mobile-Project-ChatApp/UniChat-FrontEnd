@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -12,10 +13,13 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { ThemeContext } from "@/contexts/ThemeContext";
+import { StatusBar } from "expo-status-bar";
 
 export default function Chatroom() {
   const { title, icon }: any = useLocalSearchParams();
+  const { darkMode } = useContext(ThemeContext);
+  
   const [messages, setMessages] = useState([
     { id: "1", text: "Hello!", time: "10:30 AM", sender: "other" },
     { id: "2", text: "Hey, how's it going?", time: "10:32 AM", sender: "me" },
@@ -36,14 +40,15 @@ export default function Chatroom() {
   };
 
   return (
-
-    <View style={styles.container}>
+    <View style={[styles.container, darkMode && styles.darkContainer]}>
+      <StatusBar style={darkMode ? 'light' : 'dark'} />
+      
       {/* HEADER */}
-      <SafeAreaView>
-      <View style={styles.header}>
-        <Image source={{ uri: icon }} style={styles.icon} />
-        <Text style={styles.title}>{title}</Text>
-      </View>
+      <SafeAreaView style={darkMode ? { backgroundColor: '#1E1E1E' } : { backgroundColor: '#f0f0f0' }}>
+        <View style={[styles.header, darkMode && styles.darkHeader]}>
+          <Image source={{ uri: icon }} style={styles.icon} />
+          <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
+        </View>
       </SafeAreaView>
 
       {/* MESSAGES */}
@@ -51,21 +56,33 @@ export default function Chatroom() {
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={[styles.messageContainer, item.sender === "me" ? styles.myMessage : styles.otherMessage]}>
-            <Text style={styles.messageText}>{item.text}</Text>
-            <Text style={styles.messageTime}>{item.time}</Text>
+          <View 
+            style={[
+              styles.messageContainer, 
+              item.sender === "me" 
+                ? [styles.myMessage, darkMode && styles.darkMyMessage] 
+                : [styles.otherMessage, darkMode && styles.darkOtherMessage]
+            ]}
+          >
+            <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>
+              {item.text}
+            </Text>
+            <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>
+              {item.time}
+            </Text>
           </View>
         )}
-        contentContainerStyle={styles.messagesList}
+        contentContainerStyle={[styles.messagesList, darkMode && styles.darkMessagesList]}
         inverted={true} // Ensure messages appear from bottom to top
       />
 
       {/* INPUT */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, darkMode && styles.darkInputContainer]}>
           <TextInput
             placeholder="Type a message..."
-            style={styles.input}
+            placeholderTextColor={darkMode ? "#aaa" : "#999"}
+            style={[styles.input, darkMode && styles.darkInput]}
             value={inputText}
             onChangeText={setInputText}
           />
@@ -75,7 +92,6 @@ export default function Chatroom() {
         </View>
       </KeyboardAvoidingView>
     </View>
-    
   );
 }
 
@@ -83,6 +99,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  darkContainer: {
+    backgroundColor: "#121212",
   },
   header: {
     flexDirection: "row",
@@ -92,9 +111,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: "#ddd",
   },
+  darkHeader: {
+    backgroundColor: "#1E1E1E",
+    borderColor: "#333",
+  },
   title: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#000",
+  },
+  darkText: {
+    color: "#fff",
   },
   icon: {
     width: 45,
@@ -108,6 +135,9 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     justifyContent: "flex-end", // Ensures messages stay at the bottom
   },
+  darkMessagesList: {
+    backgroundColor: "#121212",
+  },
   messageContainer: {
     maxWidth: "75%",
     padding: 7,
@@ -119,20 +149,32 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     borderBottomRightRadius: 0,
   },
+  darkMyMessage: {
+    backgroundColor: "#004D40", // Darker green for dark mode
+  },
   otherMessage: {
     backgroundColor: "#aac4a5",
     alignSelf: "flex-start",
     borderBottomLeftRadius: 0,
   },
+  darkOtherMessage: {
+    backgroundColor: "#303030", // Darker grey for dark mode
+  },
   messageText: {
     fontSize: 16,
     color: "#fff",
+  },
+  darkMessageText: {
+    color: "#fff", // Keep white text in dark mode too
   },
   messageTime: {
     fontSize: 12,
     color: "#a0a1a0",
     textAlign: "right",
     marginTop: 5,
+  },
+  darkMessageTime: {
+    color: "#ccc",
   },
   inputContainer: {
     flexDirection: "row",
@@ -144,10 +186,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: "#ddd",
   },
+  darkInputContainer: {
+    backgroundColor: "#1E1E1E",
+    borderColor: "#333",
+  },
   input: {
     flex: 1,
     padding: 10,
     fontSize: 16,
+    color: "#000",
+  },
+  darkInput: {
+    color: "#fff",
   },
   sendButton: {
     backgroundColor: "#29df04",

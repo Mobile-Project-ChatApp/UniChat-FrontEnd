@@ -1,135 +1,101 @@
-import GroupChat from '@/types/GroupChat'
-import User from '@/types/Users'
-import MaterialIcons from '@expo/vector-icons/MaterialIcons'
-import { router } from 'expo-router'
-import React from 'react'
-import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import React from "react";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
-export default function Chat({title, icon}: GroupChat) {
+interface ChatProps {
+  title: string;
+  icon: string;
+  darkMode?: boolean;
+}
 
-  const EnterChat = () => {
-    console.warn('Enter the chat', title)
+export default function Chat({ title, icon, darkMode }: ChatProps) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    console.log("Navigating to Chatroom with:", { title, icon });
+    // Use the path that matches your file structure according to TypeScript
     router.push({
       pathname: "/Chatroom/Chatroom",
-      params: { title, icon }, // Passing the title as a parameter
+      params: { title, icon }
     });
-  }
-  
+  };
+
   return (
-    <TouchableOpacity 
-      style={styles.container} 
-      onPress={EnterChat}
-      activeOpacity={0.7}
+    <TouchableOpacity
+      style={[styles.container, darkMode && styles.darkContainer]}
+      onPress={handlePress}
     >
-      <View style={styles.chatHeader}>
-        <View style={styles.userContainer}>
-          <View style={styles.iconWrapper}>
-            <Image source={{uri: icon}} style={styles.icon} />
-            <View style={styles.statusIndicator}></View>
-          </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.message}>Toshi: Hello lads</Text>
-          </View>
-        </View>
-        <View style={styles.timeContainer}>
-          <Text style={styles.timeText}>1:00 PM</Text>
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadText}>2</Text>
-          </View>
+      <Image source={{ uri: icon }} style={styles.icon} />
+      <View style={styles.textContainer}>
+        <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
+        <Text style={[styles.lastMessage, darkMode && styles.darkSecondaryText]}>
+          Tap to join the conversation
+        </Text>
+      </View>
+      <View style={styles.infoContainer}>
+        <Text style={[styles.time, darkMode && styles.darkSecondaryText]}>Now</Text>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>New</Text>
         </View>
       </View>
     </TouchableOpacity>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
-    },
-    chatHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 12,
-    },
-    userContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    iconWrapper: {
-        position: 'relative',
-        marginRight: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    textContainer: {
-        flex: 1,
-    },
-    icon: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        borderWidth: 2,
-        borderColor: "#fff",
-    },
-    statusIndicator: {
-        position: 'absolute',
-        width: 12,
-        height: 12,
-        backgroundColor: '#4CD964',
-        borderRadius: 6,
-        borderWidth: 2,
-        borderColor: '#fff',
-        bottom: 0,
-        right: 0,
-    },
-    title: {
-        fontWeight: 'bold',
-        fontSize: 16,
-        color: '#222',
-        marginBottom: 4
-    },
-    message: {
-        color: '#666',
-        fontSize: 14
-    },
-    timeContainer: {
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        height: 50,
-    },
-    timeText: {
-        fontSize: 12,
-        color: '#666',
-        marginBottom: 8
-    },
-    unreadBadge: {
-        backgroundColor: '#4A90E2',
-        borderRadius: 10,
-        minWidth: 20,
-        height: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 6,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1,
-        elevation: 2,
-    },
-    unreadText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: 'bold'
-    }
-})
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    backgroundColor: "white",
+    borderRadius: 12,
+  },
+  darkContainer: {
+    backgroundColor: "#1E1E1E",
+  },
+  icon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+    color: "#000",
+  },
+  darkText: {
+    color: "#fff",
+  },
+  lastMessage: {
+    fontSize: 14,
+    color: "#666",
+  },
+  darkSecondaryText: {
+    color: "#aaa",
+  },
+  infoContainer: {
+    alignItems: "flex-end",
+  },
+  time: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 5,
+  },
+  badge: {
+    backgroundColor: "#4A90E2",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+});

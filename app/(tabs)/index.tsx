@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import Chat from "@/components/Chat";
 import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
@@ -7,43 +7,41 @@ import { ThemeContext } from "@/contexts/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { fetchChatRooms } from "@/services/chatroomApi";
+import GroupChat from "@/types/GroupChat";
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { darkMode } = useContext(ThemeContext);
 
-  const Groups = [
-    {
-      id: 1,
-      title: "OAMK Students",
-      icon: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPPPTmS2vzKcDth3N8ea5Sq_kHfbGE1FezMw&s",
-    },
-    {
-      id: 2,
-      title: "Fonty Students",
-      icon: "https://upload.wikimedia.org/wikipedia/commons/5/54/Logo_of_Fontys_University_of_Applied_Sciences.png",
-    },
-    {
-      id: 3,
-      title: "Front-End Developers",
-      icon: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPPPTmS2vzKcDth3N8ea5Sq_kHfbGE1FezMw&s",
-    },
-    {
-      id: 4,
-      title: "Back-End Developers",
-      icon: "https://upload.wikimedia.org/wikipedia/commons/5/54/Logo_of_Fontys_University_of_Applied_Sciences.png",
-    },
-    {
-      id: 5,
-      title: "IT Bachelor Programme",
-      icon: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPPPTmS2vzKcDth3N8ea5Sq_kHfbGE1FezMw&s",
-    },
-    {
-      id: 6,
-      title: "React Native Course Students",
-      icon: "https://upload.wikimedia.org/wikipedia/commons/5/54/Logo_of_Fontys_University_of_Applied_Sciences.png",
-    },
-  ];
+  const [groups, setGroups] = useState<GroupChat[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const DefaultGroupIcon = ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSg5K8ooFP05Qm9qt1hBvApo5z4FCGefVx5w&s");
+
+  useEffect(() => {
+    const loadChatRooms = async () => {
+        try {
+            const chatRooms = await fetchChatRooms(); // Fetch chat rooms from the API
+            setGroups(chatRooms);
+        } catch (error) {
+            console.error("Failed to load chat rooms:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    loadChatRooms();
+}, []);
+
+if (loading) {
+    return (
+        <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
+            <Text style={[styles.header, darkMode && styles.darkText]}>Loading...</Text>
+        </SafeAreaView>
+    );
+}
+
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
@@ -75,12 +73,12 @@ export default function HomeScreen() {
 
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.chatListContainer}>
-          {Groups.map((group) => (
+          {groups.map((group) => (
             <View key={group.id} style={[
               styles.chatItemContainer, 
               darkMode && styles.darkChatItemContainer
             ]}>
-              <Chat title={group.title} icon={group.icon} darkMode={darkMode} />
+              <Chat title={group.name} icon={DefaultGroupIcon} darkMode={darkMode} />
             </View>
           ))}
         </View>

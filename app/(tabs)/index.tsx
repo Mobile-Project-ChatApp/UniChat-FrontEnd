@@ -6,31 +6,35 @@ import { AuthContext } from "@/contexts/AuthContext";
 import { ThemeContext } from "@/contexts/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { fetchChatRooms } from "@/services/chatroomApi";
 import GroupChat from "@/types/GroupChat";
+import Entypo from '@expo/vector-icons/Entypo';
+import CreateGroup from "@/components/CreateGroup";
+import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { darkMode } = useContext(ThemeContext);
+  const router = useRouter();
 
   const [groups, setGroups] = useState<GroupChat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateGroupVisible, setIsCreateGroupVisible] = useState(false);
 
   const DefaultGroupIcon = ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSg5K8ooFP05Qm9qt1hBvApo5z4FCGefVx5w&s");
 
-  useEffect(() => {
-    const loadChatRooms = async () => {
-        try {
-            const chatRooms = await fetchChatRooms(); // Fetch chat rooms from the API
-            setGroups(chatRooms);
-        } catch (error) {
-            console.error("Failed to load chat rooms:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const loadChatRooms = async () => {
+    try {
+        const chatRooms = await fetchChatRooms(); // Fetch chat rooms from the API
+        setGroups(chatRooms);
+    } catch (error) {
+        console.error("Failed to load chat rooms:", error);
+    } finally {
+        setLoading(false);
+    }
+};
 
+  useEffect(() => {
     loadChatRooms();
 }, []);
 
@@ -41,7 +45,6 @@ if (loading) {
         </SafeAreaView>
     );
 }
-
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
@@ -83,6 +86,29 @@ if (loading) {
           ))}
         </View>
       </ScrollView>
+      <View>
+        <TouchableOpacity
+          style={styles.CreateGroupIcon}
+          onPress={() => setIsCreateGroupVisible(true)}
+        >
+          <Entypo name="plus" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Create Group Modal */}
+      <CreateGroup
+        visible={isCreateGroupVisible}
+        onClose={() => setIsCreateGroupVisible(false)}
+        onGroupCreated={(newGroup) => {
+          console.log("New Group Created:", newGroup); // Debugging
+          setGroups((prevGroups) => [
+            { ...newGroup, id: parseInt(newGroup.id) } as GroupChat, 
+            ...prevGroups
+          ]); // Add the new group to the state
+          loadChatRooms()
+          setIsCreateGroupVisible(false); // Close the modal
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -107,6 +133,24 @@ const styles = StyleSheet.create({
   },
   darkText: {
     color: '#fff',
+  },
+  CreateGroupIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 22,
+    marginRight: 10,
+    backgroundColor: '#5d43ba',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 5,
+    right: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+
   },
   searchContainer: {
     paddingHorizontal: 20,

@@ -11,3 +11,8 @@ export const fetchChatRooms = async () => {
         throw error;
     }
 };
+
+export const createGroupChat = async (data: { name: string; description: string }) => {
+  const response = await axios.post(`${API_BASE_URL}/chatroom`, data);
+  return response.data;
+};

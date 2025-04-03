@@ -2,7 +2,11 @@ import React, { createContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { showToast } from "@/utils/showToast";
 import { useRouter } from "expo-router";
-import { registerUser, loginUser, fetchUserProfile } from "../api/userApi";
+import {
+  registerUser,
+  loginUser,
+  fetchUserProfile,
+} from "@/services/authService";
 import User from "../types/Users";
 import { navigateToLogin } from "../services/navigationHelper";
 import { API_BASE_URL } from "../config/apiConfig";
@@ -38,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [verificationEmail, setVerificationEmail] = useState<string | null>(
     null
   );
-  const [users, setUsers] = useState<User[]>([]);
+  //const [users, setUsers] = useState<User[]>([]);
   const router = useRouter();
 
   useEffect(() => {

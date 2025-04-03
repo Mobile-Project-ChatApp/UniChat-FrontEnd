@@ -12,7 +12,7 @@ import { View } from "react-native";
 import { AuthProvider, AuthContext } from "../contexts/AuthContext";
 import { ThemeProvider, ThemeContext } from "../contexts/ThemeContext";
 import { NotificationProvider } from "../contexts/NotificationContext";
-import { fetchUserProfile } from "../api/userApi";
+import { fetchUserProfile } from "../services/authService";
 
 // Wrapper component to access the context values
 function MainLayout() {

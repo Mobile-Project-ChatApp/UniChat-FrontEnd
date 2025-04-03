@@ -11,6 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { AuthProvider, AuthContext } from "../contexts/AuthContext";
 import { ThemeProvider, ThemeContext } from "../contexts/ThemeContext";
+import { NotificationProvider } from "../contexts/NotificationContext";
 import { fetchUserProfile } from "../api/userApi";
 
 // Wrapper component to access the context values
@@ -92,7 +93,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <MainLayout />
+        <NotificationProvider>
+          <MainLayout />
+        </NotificationProvider>
       </ThemeProvider>
     </AuthProvider>
   );

@@ -1,9 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { NotificationType } from "../types/types";
 
 interface NotificationCardProps {
-  type: "invite" | "kick" | "mention" | "announcement";
+  type: NotificationType;
   content: string;
   read: boolean;
   onMarkRead: () => void;

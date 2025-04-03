@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import NotificationCard from "../components/NotificationCard";
 import { ThemeContext } from "../contexts/ThemeContext";
+import { NotificationContext } from "@/contexts/NotificationContext";
 import ModalBase from "react-native-modal";
 import { MaterialIcons } from "@expo/vector-icons";
 
@@ -17,32 +18,12 @@ const filters = ["All", "Mentioned", "Unread", "Announcement for xxx"];
 export default function NotificationScreen() {
   const { darkMode } = useContext(ThemeContext);
   const [selectedFilter, setSelectedFilter] = useState("All");
-  const [notifications, setNotifications] = useState([
-    {
-      id: "1",
-      type: "invite",
-      content: "You were invited to #group1",
-      read: false,
-    },
-    {
-      id: "2",
-      type: "mention",
-      content: "Someone@you in #group2",
-      read: false,
-    },
-    {
-      id: "3",
-      type: "announcement",
-      content: "New announcement from your department",
-      read: true,
-    },
-  ]);
-
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [activeNotificationId, setActiveNotificationId] = useState<
     string | null
   >(null);
+  const { notifications, setNotifications } = useContext(NotificationContext);
 
   const handleMarkRead = useCallback((id: string) => {
     setNotifications((prev) =>

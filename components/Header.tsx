@@ -7,9 +7,15 @@ interface HeaderProps {
   username: string;
   avatar: any;
   darkMode?: boolean;
+  hasUnreadNotifications?: boolean;
 }
 
-export default function Header({ username, avatar, darkMode }: HeaderProps) {
+export default function Header({
+  username,
+  avatar,
+  darkMode,
+  hasUnreadNotifications,
+}: HeaderProps) {
   const router = useRouter();
 
   const handleNotificationPress = () => {
@@ -30,7 +36,7 @@ export default function Header({ username, avatar, darkMode }: HeaderProps) {
         style={[styles.iconButton, darkMode && styles.darkIconButton]}
         onPress={handleNotificationPress}
       >
-        <View style={styles.notificationBadge}></View>
+        {hasUnreadNotifications && <View style={styles.notificationBadge} />}
         <MaterialIcons name="notifications" size={24} color="#4A90E2" />
       </TouchableOpacity>
     </View>

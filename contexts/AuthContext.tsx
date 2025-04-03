@@ -4,8 +4,8 @@ import { showToast } from "@/utils/showToast";
 import { useRouter } from "expo-router";
 import { registerUser, loginUser, fetchUserProfile } from "../api/userApi";
 import User from "../types/Users";
-import { navigateToLogin } from '../services/navigationHelper';
-import { API_BASE_URL } from "../config/apiConfig"; // Import API_BASE_URL
+import { navigateToLogin } from "../services/navigationHelper";
+import { API_BASE_URL } from "../config/apiConfig";
 
 type AuthContextType = {
   user: User | null;
@@ -17,7 +17,7 @@ type AuthContextType = {
     password: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
-  deleteAccount: () => Promise<boolean>; 
+  deleteAccount: () => Promise<boolean>;
   verificationEmail: string | null;
   setVerificationEmail: React.Dispatch<React.SetStateAction<string | null>>;
 };
@@ -28,7 +28,7 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
-  deleteAccount: async () => false, 
+  deleteAccount: async () => false,
   verificationEmail: null,
   setVerificationEmail: () => {},
 });
@@ -50,7 +50,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const loadUser = async () => {
       const accessToken = await AsyncStorage.getItem("accessToken");
       if (!accessToken) {
-        // Logic for when no access token is found
         return;
       }
       try {
@@ -130,9 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const profileRes = await fetchUserProfile(accessToken);
       setUser(profileRes.data);
-
       showToast("success", "Login successful!", "Welcome back 👋");
-
       router.replace("/(tabs)");
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -143,33 +140,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Logout the user
   const logout = async () => {
-    await AsyncStorage.removeItem('userData');
-    await AsyncStorage.removeItem('user'); // Remove both storage keys
-    await AsyncStorage.removeItem('accessToken');
-    await AsyncStorage.removeItem('refreshToken');
-    setUser(null); // Update context
-    navigateToLogin(); // Navigate
+    await AsyncStorage.removeItem("userData");
+    await AsyncStorage.removeItem("user");
+    await AsyncStorage.removeItem("accessToken");
+    await AsyncStorage.removeItem("refreshToken");
+    setUser(null);
+    navigateToLogin();
   };
 
   //delete account
   const deleteAccount = async () => {
     try {
       // 1. Get the access token and user ID
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      
+      const accessToken = await AsyncStorage.getItem("accessToken");
+
       if (!accessToken) {
-        throw new Error('Authentication token not found. Please log in again.');
+        throw new Error("Authentication token not found. Please log in again.");
       }
-      
+
       // 2. Get the current user ID - you need this to delete the specific user
       let userId;
-      
-      const userData = await AsyncStorage.getItem('userData');
+
+      const userData = await AsyncStorage.getItem("userData");
       if (userData) {
         const parsedData = JSON.parse(userData);
         userId = parsedData.id;
       }
-      
+
       if (!userId) {
         // If user ID isn't in userData, try to get it from user state
         if (user && user.id) {
@@ -178,71 +175,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // If still no ID, try to get it from profile API
           const profileResponse = await fetch(`${API_BASE_URL}/auth/profile`, {
             headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
+              Authorization: `Bearer ${accessToken}`,
+            },
           });
-          
+
           if (profileResponse.ok) {
             const profileData = await profileResponse.json();
             userId = profileData.id;
           }
         }
       }
-      
+
       if (!userId) {
-        throw new Error('Could not determine user ID for deletion');
+        throw new Error("Could not determine user ID for deletion");
       }
-      
-      console.log('Sending delete account request for user ID:', userId);
-      
+
+      console.log("Sending delete account request for user ID:", userId);
+
       // 3. Send the DELETE request to the correct endpoint
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        }
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
-      
-      console.log('Delete account response status:', response.status);
-      
+
+      console.log("Delete account response status:", response.status);
+
       // 4. Handle the response
       if (response.status >= 200 && response.status < 300) {
         // Success - clear storage and update state
-        await AsyncStorage.removeItem('userData');
-        await AsyncStorage.removeItem('user');
-        await AsyncStorage.removeItem('accessToken');
-        await AsyncStorage.removeItem('refreshToken');
-        
+        await AsyncStorage.removeItem("userData");
+        await AsyncStorage.removeItem("user");
+        await AsyncStorage.removeItem("accessToken");
+        await AsyncStorage.removeItem("refreshToken");
+
         setUser(null);
-        
+
         // Navigate to login
         navigateToLogin();
-        
+
         return true;
       } else {
         // Error handling
-        let errorMessage = 'Failed to delete account';
-        
+        let errorMessage = "Failed to delete account";
+
         switch (response.status) {
           case 401:
-            errorMessage = 'Unauthorized. Please log in again.';
+            errorMessage = "Unauthorized. Please log in again.";
             break;
           case 403:
-            errorMessage = 'You do not have permission to delete this account.';
+            errorMessage = "You do not have permission to delete this account.";
             break;
           case 404:
-            errorMessage = 'User account not found.';
+            errorMessage = "User account not found.";
             break;
           case 500:
-            errorMessage = 'Server error. Please try again later.';
+            errorMessage = "Server error. Please try again later.";
             break;
         }
-        
+
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error('Delete account error:', error);
+      console.error("Delete account error:", error);
       throw error;
     }
   };

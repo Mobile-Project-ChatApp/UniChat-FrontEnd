@@ -1,51 +1,100 @@
-import React, { useContext } from 'react';
-import { SafeAreaView, Text, View, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { SafeAreaView, Text, View, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../contexts/ThemeContext';
+import { fetchAllAnnouncements, fetchImportantAnnouncements, fetchRecentAnnouncements } from '../../api/announcementsApi';
+
+interface Announcement {
+  id: number;
+  title: string;
+  content: string;
+  sender: string;
+  senderAvatar: string;
+  date: string;
+  important: boolean;
+  chatRoomId?: number;
+}
+
+enum AnnouncementFilter {
+  ALL = "all",
+  IMPORTANT = "important",
+  RECENT = "recent"
+}
 
 export default function AnnouncementScreen() {
-  // Get dark mode status from ThemeContext
   const { darkMode } = useContext(ThemeContext);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentFilter, setCurrentFilter] = useState<AnnouncementFilter>(AnnouncementFilter.ALL);
 
-  const announcements = [
-    {
-      id: 1,
-      title: "New Course Registration Open",
-      content: "Registration for Spring 2025 courses is now open. Please complete your registration by March 25th. Priority registration is available for senior students until March 15th.",
-      sender: "Academic Office",
-      senderAvatar: "https://pbs.twimg.com/profile_images/1878018568199036928/rQEIyiM-_400x400.jpg",
-      date: "March 10, 2025",
-      important: true,
-    },
-    {
-      id: 2,
-      title: "Campus Wi-Fi Maintenance",
-      content: "The campus Wi-Fi network will undergo scheduled maintenance this weekend. Service interruptions are expected between 10 PM Saturday and 4 AM Sunday.",
-      sender: "IT Department",
-      senderAvatar: "https://pbs.twimg.com/media/FTI52wzVUAgCr3d.jpg:large",
-      date: "March 9, 2025",
-      important: false,
-    },
-    {
-      id: 3,
-      title: "Library Hours Extended",
-      content: "Starting next week, the main library will extend its hours until midnight on weekdays to support students during the exam period.",
-      sender: "Library Services",
-      senderAvatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPPPTmS2vzKcDth3N8ea5Sq_kHfbGE1FezMw&s",
-      date: "March 8, 2025",
-      important: false,
+  useEffect(() => {
+    loadAnnouncements();
+  }, [currentFilter]);
+
+  const loadAnnouncements = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let result;
+      switch (currentFilter) {
+        case AnnouncementFilter.IMPORTANT:
+          result = await fetchImportantAnnouncements();
+          break;
+        case AnnouncementFilter.RECENT:
+          result = await fetchRecentAnnouncements();
+          break;
+        case AnnouncementFilter.ALL:
+        default:
+          result = await fetchAllAnnouncements();
+          break;
+      }
+      
+      // Format dates from API response
+      const formattedAnnouncements = result.map((announcement: any) => ({
+        ...announcement,
+        date: new Date(announcement.date).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      }));
+      
+      setAnnouncements(formattedAnnouncements);
+    } catch (err) {
+      console.error("Failed to fetch announcements:", err);
+      setError("Failed to load announcements. Please try again later.");
+      
+      // For development purposes, load mock data when API fails
+      setAnnouncements([
+        {
+          id: 1,
+          title: "New Course Registration Open",
+          content: "Registration for Spring 2025 courses is now open. Please complete your registration by March 25th.",
+          sender: "Academic Office",
+          senderAvatar: "https://pbs.twimg.com/profile_images/1878018568199036928/rQEIyiM-_400x400.jpg",
+          date: "March 10, 2025",
+          important: true,
+        },
+        {
+          id: 2,
+          title: "Campus Wi-Fi Maintenance",
+          content: "The campus Wi-Fi network will undergo scheduled maintenance this weekend.",
+          sender: "IT Department",
+          senderAvatar: "https://pbs.twimg.com/media/FTI52wzVUAgCr3d.jpg:large",
+          date: "March 9, 2025",
+          important: false,
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  interface Announcement {
-    id: number;
-    title: string;
-    content: string;
-    sender: string;
-    senderAvatar: string;
-    date: string;
-    important: boolean;
-  }
+  const handleFilterChange = (filter: AnnouncementFilter) => {
+    setCurrentFilter(filter);
+  };
 
   const AnnouncementItem = ({ announcement }: { announcement: Announcement }) => (
     <View style={[
@@ -113,32 +162,77 @@ export default function AnnouncementScreen() {
       
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.filterContainer}>
-          <TouchableOpacity style={[styles.filterButton, styles.filterButtonActive]}>
-            <Text style={styles.filterButtonTextActive}>All</Text>
+          <TouchableOpacity 
+            style={[
+              styles.filterButton, 
+              currentFilter === AnnouncementFilter.ALL && styles.filterButtonActive,
+              currentFilter !== AnnouncementFilter.ALL && darkMode && styles.darkFilterButton
+            ]}
+            onPress={() => handleFilterChange(AnnouncementFilter.ALL)}
+          >
+            <Text style={currentFilter === AnnouncementFilter.ALL 
+              ? styles.filterButtonTextActive 
+              : [styles.filterButtonText, darkMode && styles.darkFilterButtonText]
+            }>All</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[
-            styles.filterButton,
-            darkMode && styles.darkFilterButton
-          ]}>
-            <Text style={[
-              styles.filterButtonText,
-              darkMode && styles.darkFilterButtonText
-            ]}>Important</Text>
+          <TouchableOpacity 
+            style={[
+              styles.filterButton, 
+              currentFilter === AnnouncementFilter.IMPORTANT && styles.filterButtonActive,
+              currentFilter !== AnnouncementFilter.IMPORTANT && darkMode && styles.darkFilterButton
+            ]}
+            onPress={() => handleFilterChange(AnnouncementFilter.IMPORTANT)}
+          >
+            <Text style={currentFilter === AnnouncementFilter.IMPORTANT 
+              ? styles.filterButtonTextActive 
+              : [styles.filterButtonText, darkMode && styles.darkFilterButtonText]
+            }>Important</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[
-            styles.filterButton,
-            darkMode && styles.darkFilterButton
-          ]}>
-            <Text style={[
-              styles.filterButtonText,
-              darkMode && styles.darkFilterButtonText
-            ]}>Recent</Text>
+          <TouchableOpacity 
+            style={[
+              styles.filterButton, 
+              currentFilter === AnnouncementFilter.RECENT && styles.filterButtonActive,
+              currentFilter !== AnnouncementFilter.RECENT && darkMode && styles.darkFilterButton
+            ]}
+            onPress={() => handleFilterChange(AnnouncementFilter.RECENT)}
+          >
+            <Text style={currentFilter === AnnouncementFilter.RECENT 
+              ? styles.filterButtonTextActive 
+              : [styles.filterButtonText, darkMode && styles.darkFilterButtonText]
+            }>Recent</Text>
           </TouchableOpacity>
         </View>
 
-        {announcements.map((announcement) => (
-          <AnnouncementItem key={announcement.id} announcement={announcement} />
-        ))}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={darkMode ? "#82B1FF" : "#4A90E2"} />
+            <Text style={[styles.loadingText, darkMode && styles.darkText]}>
+              Loading announcements...
+            </Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={48} color={darkMode ? "#FF6B6B" : "#FF3B30"} />
+            <Text style={[styles.errorText, darkMode && styles.darkText]}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={loadAnnouncements}
+            >
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : announcements.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="information-circle" size={48} color={darkMode ? "#82B1FF" : "#4A90E2"} />
+            <Text style={[styles.emptyText, darkMode && styles.darkText]}>
+              No announcements to display
+            </Text>
+          </View>
+        ) : (
+          announcements.map((announcement) => (
+            <AnnouncementItem key={announcement.id} announcement={announcement} />
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -147,137 +241,135 @@ export default function AnnouncementScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 15,
   },
   darkContainer: {
     backgroundColor: '#121212',
   },
-  scrollContainer: {
-    flex: 1,
-  },
   header: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginHorizontal: 20,
-    marginVertical: 15,
-    color: '#000',
+    marginTop: 15,
+    marginBottom: 15,
   },
   darkText: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
   darkSecondaryText: {
-    color: '#aaa',
+    color: '#AAAAAA',
+  },
+  scrollContainer: {
+    flex: 1,
   },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
+    justifyContent: 'space-between',
     marginBottom: 15,
+    paddingHorizontal: 5,
   },
   filterButton: {
-    paddingHorizontal: 16,
     paddingVertical: 8,
-    marginRight: 8,
+    paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#EEEEEE',
+    minWidth: 90,
+    alignItems: 'center',
   },
   darkFilterButton: {
-    backgroundColor: '#333',
+    backgroundColor: '#333333',
   },
   filterButtonActive: {
     backgroundColor: '#4A90E2',
   },
   filterButtonText: {
-    color: '#666',
+    color: '#666666',
     fontWeight: '500',
   },
   darkFilterButtonText: {
-    color: '#ccc',
+    color: '#AAAAAA',
   },
   filterButtonTextActive: {
     color: 'white',
     fontWeight: '500',
   },
   announcementItem: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
+    position: 'relative',
   },
   darkAnnouncementItem: {
     backgroundColor: '#1E1E1E',
-    borderColor: '#333',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
   },
   importantBanner: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#FF3B30',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderTopRightRadius: 12,
+    borderBottomLeftRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-    marginBottom: 10,
   },
   importantText: {
     color: 'white',
-    fontWeight: 'bold',
-    marginLeft: 5,
+    fontWeight: '500',
+    marginLeft: 4,
+    fontSize: 12,
   },
   announcementHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 10,
   },
   announcementTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
-    color: '#000',
   },
   announcementDate: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 10,
   },
   announcementContent: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#333',
+    fontSize: 16,
+    lineHeight: 22,
     marginBottom: 15,
   },
   senderInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   senderAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     marginRight: 8,
   },
   senderName: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#666666',
   },
   actionButtons: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 10,
+    borderTopColor: '#EEEEEE',
+    paddingTop: 12,
   },
   darkBorder: {
-    borderTopColor: '#333',
+    borderTopColor: '#333333',
   },
   actionButton: {
     flexDirection: 'row',
@@ -285,11 +377,50 @@ const styles = StyleSheet.create({
     marginRight: 20,
   },
   actionButtonText: {
-    color: '#4A90E2',
     marginLeft: 5,
-    fontSize: 14,
+    color: '#4A90E2',
   },
   darkActionButtonText: {
     color: '#82B1FF',
-  }
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  errorText: {
+    marginTop: 10,
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 15,
+  },
+  retryButton: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+  },
 });

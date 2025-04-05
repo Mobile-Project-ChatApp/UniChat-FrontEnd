@@ -1,7 +1,7 @@
 export default interface GroupChat {
-    // id: number;
-    title: string;
-    icon: string;
+    id: number;
+    name: string;
+    description: string;
     // members: string[];
     // messages: string[];
     // createdAt: string;

@@ -8,7 +8,7 @@ import {
   Modal,
 } from "react-native";
 import { showToast } from "@/utils/showToast";
-import { createGroupChat } from "@/services/chatroomApi";
+import { createGroupChat } from "@/services/chatroomService";
 
 export default function CreateGroup({
   visible,

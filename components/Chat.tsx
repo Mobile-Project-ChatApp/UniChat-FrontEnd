@@ -7,17 +7,17 @@ interface ChatProps {
   title: string;
   icon: string;
   darkMode?: boolean;
+  roomId: number;
 }
 
-export default function Chat({ title, icon, darkMode }: ChatProps) {
+export default function Chat({ title, icon, darkMode, roomId }: ChatProps) {
   const router = useRouter();
 
   const handlePress = () => {
     console.log("Navigating to Chatroom with:", { title, icon });
-    // Use the path that matches your file structure according to TypeScript
     router.push({
       pathname: "/Chatroom/Chatroom",
-      params: { title, icon }
+      params: { title, icon, roomId }, // Ensure roomId is passed here
     });
   };
 

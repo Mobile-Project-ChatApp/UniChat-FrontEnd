@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,36 +15,141 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeContext } from "@/contexts/ThemeContext";
 import { StatusBar } from "expo-status-bar";
+import * as signalR from "@microsoft/signalr";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Chatroom() {
-  const { title, icon }: any = useLocalSearchParams();
+  const { title, icon, roomId }: any = useLocalSearchParams(); // Assume roomId is passed as a parameter
   const { darkMode } = useContext(ThemeContext);
-  
-  const [messages, setMessages] = useState([
-    { id: "1", text: "Hello!", time: "10:30 AM", sender: "other" },
-    { id: "2", text: "Hey, how's it going?", time: "10:32 AM", sender: "me" },
-    { id: "3", text: "All good! You?", time: "10:35 AM", sender: "other" },
-  ]);
-  const [inputText, setInputText] = useState("");
 
-  const sendMessage = () => {
-    if (inputText.trim() === "") return;
-    const newMessage = {
-      id: String(messages.length + 1),
-      text: inputText,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
-      sender: "me",
+  const [messages, setMessages] = useState<{ id: string; text: string; time: string; sender: string }[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+
+  const getAccessToken = async () => {
+    const token = await AsyncStorage.getItem("accessToken"); // Retrieve token from storage
+    if (!token) {
+      console.error("Access token is missing");
+    }
+    return token;
+  };
+
+  useEffect(() => {
+    // Initialize SignalR connection
+    const newConnection = new signalR.HubConnectionBuilder()
+      .withUrl("http://localhost:5222/chatHub", {
+        accessTokenFactory: async () => {
+          const token = await getAccessToken(); // Use the helper function
+          return token || ""; // Return the token or an empty string
+        },
+      })
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
+
+    setConnection(newConnection);
+
+    return () => {
+      // Cleanup connection on unmount
+      if (connection) {
+        connection.stop();
+      }
     };
-    setMessages([newMessage, ...messages]); // Add new messages at the beginning
-    setInputText("");
+  }, []);
+
+  useEffect(() => {
+    if (connection) {
+      connection
+        .start()
+        .then(async () => {
+          console.log("SignalR Connected.");
+
+          // Join the room
+          if (roomId) {
+            await connection.invoke("JoinRoom", parseInt(roomId));
+            console.log(`Joined room ${roomId}`);
+          }
+
+          // Handle receiving messages
+          connection.on("ReceiveMessage", (message) => {
+            setMessages((prevMessages) => [
+              {
+                id: message.id.toString(),
+                text: message.messageText,
+                time: new Date(message.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                }),
+                sender: message.sender.username,
+              },
+              ...prevMessages,
+            ]);
+          });
+
+          // Handle user joined
+          connection.on("UserJoined", (user) => {
+            console.log(`${user.username} joined the room`);
+          });
+
+          // Handle user left
+          connection.on("UserLeft", (username) => {
+            console.log(`${username} left the room`);
+          });
+        })
+        .catch((err) => console.error("SignalR Connection Error: ", err));
+    }
+
+    // Cleanup: Leave the room when unmounting
+    return () => {
+      if (connection && roomId) {
+        connection.invoke("LeaveRoom", parseInt(roomId)).then(() => {
+          console.log(`Left room ${roomId}`);
+        }).catch((err) => {
+          console.error("Error leaving room:", err);
+        });
+      }
+    };
+  }, [connection, roomId]);
+
+  const sendMessage = async () => {
+    if (!roomId) {
+      console.error("No room selected. Please join a room first.");
+      return;
+    }
+
+    if (inputText.trim() === "") {
+      console.error("Message is empty. Please type a message.");
+      return;
+    }
+
+    try {
+      if (connection) {
+        // Send the message to the backend
+        await connection.invoke("SendMessage", parseInt(roomId), inputText);
+
+        // Add the message locally
+        const newMessage = {
+          id: String(messages.length + 1),
+          text: inputText,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
+          sender: "me",
+        };
+        setMessages([newMessage, ...messages]);
+        setInputText(""); // Clear the input field
+      } else {
+        console.error("Connection is not established.");
+      }
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    }
   };
 
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>
-      <StatusBar style={darkMode ? 'light' : 'dark'} />
-      
+      <StatusBar style={darkMode ? "light" : "dark"} />
+
       {/* HEADER */}
-      <SafeAreaView style={darkMode ? { backgroundColor: '#1E1E1E' } : { backgroundColor: '#f0f0f0' }}>
+      <SafeAreaView style={darkMode ? { backgroundColor: "#1E1E1E" } : { backgroundColor: "#f0f0f0" }}>
         <View style={[styles.header, darkMode && styles.darkHeader]}>
           <Image source={{ uri: icon }} style={styles.icon} />
           <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
@@ -56,20 +161,16 @@ export default function Chatroom() {
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View 
+          <View
             style={[
-              styles.messageContainer, 
-              item.sender === "me" 
-                ? [styles.myMessage, darkMode && styles.darkMyMessage] 
-                : [styles.otherMessage, darkMode && styles.darkOtherMessage]
+              styles.messageContainer,
+              item.sender === "me"
+                ? [styles.myMessage, darkMode && styles.darkMyMessage]
+                : [styles.otherMessage, darkMode && styles.darkOtherMessage],
             ]}
           >
-            <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>
-              {item.text}
-            </Text>
-            <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>
-              {item.time}
-            </Text>
+            <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>{item.text}</Text>
+            <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>{item.time}</Text>
           </View>
         )}
         contentContainerStyle={[styles.messagesList, darkMode && styles.darkMessagesList]}
@@ -85,6 +186,7 @@ export default function Chatroom() {
             style={[styles.input, darkMode && styles.darkInput]}
             value={inputText}
             onChangeText={setInputText}
+            onSubmitEditing={sendMessage} // Send message on Enter key press
           />
           <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
             <Ionicons name="send" size={24} color="white" />

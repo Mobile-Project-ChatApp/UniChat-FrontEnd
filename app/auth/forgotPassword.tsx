@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { showToast } from "@/utils/showToast";
-import { resetPassword } from "@/api/userApi";
+import { resetPassword } from "@/services/authService";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");

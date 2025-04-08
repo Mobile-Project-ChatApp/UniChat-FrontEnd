@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 const getLocalIp = () => {
-  return "192.168.1.104";
+  return "192.168.0.101";
 };
 
 const getApiUrl = () => {

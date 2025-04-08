@@ -16,7 +16,7 @@ export const sampleNotifications: Notification[] = [
   {
     id: "3",
     type: "announcement",
-    content: "New announcement from your department",
+    content: "You get a new announcement from #group1 .",
     read: true,
   },
 
@@ -35,7 +35,7 @@ export const sampleNotifications: Notification[] = [
   {
     id: "6",
     type: "announcement",
-    content: "New announcement from the university",
+    content: "You get a new announcement from #group4.",
     read: true,
   },
 

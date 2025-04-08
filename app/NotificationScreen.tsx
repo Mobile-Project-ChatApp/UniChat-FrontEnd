@@ -13,7 +13,7 @@ import { NotificationContext } from "@/contexts/NotificationContext";
 import ModalBase from "react-native-modal";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const filters = ["All", "Mentioned", "Unread", "Announcement for xxx"];
+const filters = ["All", "Mentioned", "Unread", "Announcements"];
 
 export default function NotificationScreen() {
   const { darkMode } = useContext(ThemeContext);
@@ -52,7 +52,7 @@ export default function NotificationScreen() {
       switch (selectedFilter) {
         case "Mentioned":
           return n.type === "mention";
-        case "Announcement for xxx":
+        case "Announcements":
           return n.type === "announcement";
         case "Unread":
           return !n.read;

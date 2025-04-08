@@ -6,7 +6,7 @@ import { AuthContext } from "@/contexts/AuthContext";
 import { ThemeContext } from "@/contexts/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from "react-native";
-import { fetchChatRooms } from "@/services/chatroomApi";
+import { fetchChatRooms } from "@/services/chatroomService";
 import GroupChat from "@/types/GroupChat";
 import Entypo from '@expo/vector-icons/Entypo';
 import CreateGroup from "@/components/CreateGroup";

@@ -126,7 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { refreshToken, accessToken } = await loginUser(email, password);
 
       await AsyncStorage.setItem("refreshToken", refreshToken);
-      await AsyncStorage.setItem("accessToken", accessToken); // Store token
+      await AsyncStorage.setItem("accessToken", accessToken);
 
       const profileRes = await fetchUserProfile(accessToken);
       setUser(profileRes.data);

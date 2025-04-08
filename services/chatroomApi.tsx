@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://192.168.0.101:5222/api";
+const API_BASE_URL = "http://localhost:5222/api";
 
 export const fetchChatRooms = async () => {
     try {

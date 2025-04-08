@@ -6,58 +6,49 @@ import { AuthContext } from "@/contexts/AuthContext";
 import { ThemeContext } from "@/contexts/ThemeContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from "react-native";
 import { fetchChatRooms } from "@/services/chatroomApi";
 import GroupChat from "@/types/GroupChat";
-import Entypo from "@expo/vector-icons/Entypo";
+import Entypo from '@expo/vector-icons/Entypo';
 import CreateGroup from "@/components/CreateGroup";
 import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { darkMode } = useContext(ThemeContext);
+
   const { notifications, hasUnread } = useContext(NotificationContext);
+
   const router = useRouter();
 
   const [groups, setGroups] = useState<GroupChat[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateGroupVisible, setIsCreateGroupVisible] = useState(false);
 
-  const DefaultGroupIcon =
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSg5K8ooFP05Qm9qt1hBvApo5z4FCGefVx5w&s";
+  const DefaultGroupIcon = ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSg5K8ooFP05Qm9qt1hBvApo5z4FCGefVx5w&s");
 
   const loadChatRooms = async () => {
     try {
-      const chatRooms = await fetchChatRooms(); // Fetch chat rooms from the API
-      setGroups(chatRooms);
+        const chatRooms = await fetchChatRooms(); // Fetch chat rooms from the API
+        setGroups(chatRooms);
     } catch (error) {
-      console.error("Failed to load chat rooms:", error);
+        console.error("Failed to load chat rooms:", error);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   useEffect(() => {
     loadChatRooms();
-  }, []);
+}, []);
 
-  if (loading) {
+if (loading) {
     return (
-      <SafeAreaView
-        style={[styles.container, darkMode && styles.darkContainer]}
-      >
-        <Text style={[styles.header, darkMode && styles.darkText]}>
-          Loading...
-        </Text>
-      </SafeAreaView>
+        <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
+            <Text style={[styles.header, darkMode && styles.darkText]}>Loading...</Text>
+        </SafeAreaView>
     );
-  }
+}
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
@@ -112,18 +103,11 @@ export default function HomeScreen() {
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.chatListContainer}>
           {groups.map((group) => (
-            <View
-              key={group.id}
-              style={[
-                styles.chatItemContainer,
-                darkMode && styles.darkChatItemContainer,
-              ]}
-            >
-              <Chat
-                title={group.name}
-                icon={DefaultGroupIcon}
-                darkMode={darkMode}
-              />
+            <View key={group.id} style={[
+              styles.chatItemContainer, 
+              darkMode && styles.darkChatItemContainer
+            ]}>
+              <Chat title={group.name} icon={DefaultGroupIcon} darkMode={darkMode} />
             </View>
           ))}
         </View>
@@ -144,10 +128,10 @@ export default function HomeScreen() {
         onGroupCreated={(newGroup) => {
           console.log("New Group Created:", newGroup); // Debugging
           setGroups((prevGroups) => [
-            { ...newGroup, id: parseInt(newGroup.id) } as GroupChat,
-            ...prevGroups,
+            { ...newGroup, id: parseInt(newGroup.id) } as GroupChat, 
+            ...prevGroups
           ]); // Add the new group to the state
-          loadChatRooms();
+          loadChatRooms()
           setIsCreateGroupVisible(false); // Close the modal
         }}
       />
@@ -192,6 +176,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+  },
+  CreateGroupIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 22,
+    marginRight: 10,
+    backgroundColor: '#5d43ba',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 5,
+    right: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+
   },
   searchContainer: {
     paddingHorizontal: 20,

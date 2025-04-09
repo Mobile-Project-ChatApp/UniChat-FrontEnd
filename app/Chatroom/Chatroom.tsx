@@ -34,10 +34,13 @@ export default function Chatroom() {
     return token;
   };
 
+  const API_BASE_URL = "http://145.85.233.182:5222"; // Replace with your API base URL
+
   useEffect(() => {
     // Initialize SignalR connection
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5222/chatHub", {
+      .withUrl(`${API_BASE_URL}/chatHub`, {
+
         accessTokenFactory: async () => {
           const token = await getAccessToken(); // Use the helper function
           return token || ""; // Return the token or an empty string

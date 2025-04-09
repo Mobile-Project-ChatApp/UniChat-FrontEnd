@@ -21,6 +21,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as signalR from "@microsoft/signalr";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../../config/apiConfig"; // Import API_BASE_URL
 
 export default function Chatroom() {
   // Get parameters from route with default values to avoid undefined
@@ -46,138 +48,16 @@ export default function Chatroom() {
   const [messages, setMessages] = useState<{ id: string; text: string; time: string; sender: string }[]>([]);
   const [inputText, setInputText] = useState("");
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Define API URL based on environment - use localhost for web in dev mode
-  const API_BASE_URL = __DEV__ 
-    ? Platform.OS === 'web' 
-      ? 'http://localhost:5222'
-      : 'http://10.0.2.2:5222' // For Android emulator
-    : 'https://145.85.233.168:5222'; // Use HTTPS for production
-
-  // Check if chatroomId is valid on component mount
-  useEffect(() => {
-    console.log("Chatroom initialized with chatroomId:", chatroomId);
-    
-    if (!chatroomId) {
-      console.error("No chatroomId provided to Chatroom component");
-      Alert.alert(
-        "Error", 
-        "No chatroom selected. Redirecting to home screen.",
-        [{ text: "OK", onPress: () => router.replace("/") }]
-      );
+  const getAccessToken = async () => {
+    const token = await AsyncStorage.getItem("accessToken"); // Retrieve token from storage
+    if (!token) {
+      console.error("Access token is missing");
     }
-  }, [chatroomId, router]);
-
-  // Get auth token consistently across the app
-  const getAuthToken = async () => {
-    try {
-      // First try to get authToken
-      let token = await AsyncStorage.getItem("authToken");
-      
-      if (!token) {
-        // If no authToken, try token (legacy name)
-        token = await AsyncStorage.getItem("token");
-      }
-      
-      if (!token) {
-        console.error("Auth token is missing");
-        return null;
-      }
-      
-      return token;
-    } catch (error) {
-      console.error("Error fetching auth token:", error);
-      return null;
-    }
+    return token;
   };
 
-  // Try to refresh the token if needed
-  const refreshToken = async () => {
-    try {
-      const refreshToken = await AsyncStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        console.error("No refresh token available");
-        return false;
-      }
-      
-      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-        refreshToken
-      });
-      
-      if (response.status === 200) {
-        await AsyncStorage.setItem("authToken", response.data.token);
-        await AsyncStorage.setItem("refreshToken", response.data.refreshToken);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to refresh token:", error);
-      return false;
-    }
-  };
 
-  // Get user data on component mount
-  useEffect(() => {
-    const getUserData = async () => {
-      try {
-        console.log("Fetching user data from AsyncStorage...");
-        const id = await AsyncStorage.getItem('userId');
-        const roles = await AsyncStorage.getItem('userRoles');
-        const token = await getAuthToken();
-        
-        console.log("User ID retrieved:", id);
-        console.log("User roles retrieved:", roles);
-        console.log("Auth token available:", !!token);
-        
-        if (!id || !token) {
-          console.log("Missing user data or token, attempting to refresh token...");
-          const refreshed = await refreshToken();
-          
-          if (!refreshed) {
-            console.log("Token refresh failed, redirecting to login");
-            Alert.alert(
-              "Session Expired", 
-              "Please log in again.",
-              [{ text: "OK", onPress: () => router.replace("/WelcomeScreen") }]
-            );
-            return;
-          }
-          
-          // Try to get user data again after refresh
-          const refreshedId = await AsyncStorage.getItem('userId');
-          setUserId(refreshedId);
-        } else {
-          setUserId(id);
-        }
-        
-        if (roles) {
-          try {
-            const parsedRoles = JSON.parse(roles);
-            setUserRoles(Array.isArray(parsedRoles) ? parsedRoles : []);
-            
-            // Check if user can send announcements (admin or moderator)
-            const canAnnounce = Array.isArray(parsedRoles) && parsedRoles.some(
-              (role: string) => role.toLowerCase() === 'admin' || role.toLowerCase() === 'moderator'
-            );
-            setCanSendAnnouncements(canAnnounce);
-            console.log("Can send announcements:", canAnnounce);
-          } catch (parseError) {
-            console.error("Error parsing user roles:", parseError);
-            setUserRoles([]);
-          }
-        }
-      } catch (error) {
-        console.error('Error retrieving user data:', error);
-        Alert.alert("Error", "Could not get user data. Please try logging in again.");
-      }
-    };
-    
-    getUserData();
-  }, [router]);
-
-  // Initialize SignalR connection only if chatroomId is available
   useEffect(() => {
     if (!chatroomId) {
       console.log("Not initializing SignalR - no chatroomId provided");

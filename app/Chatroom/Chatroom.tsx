@@ -17,6 +17,7 @@ import { ThemeContext } from "@/contexts/ThemeContext";
 import { StatusBar } from "expo-status-bar";
 import * as signalR from "@microsoft/signalr";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../../config/apiConfig"; // Import API_BASE_URL
 
 export default function Chatroom() {
   const { title, icon, roomId }: any = useLocalSearchParams(); // Assume roomId is passed as a parameter
@@ -34,7 +35,6 @@ export default function Chatroom() {
     return token;
   };
 
-  const API_BASE_URL = "http://145.85.233.182:5222"; // Replace with your API base URL
 
   useEffect(() => {
     // Initialize SignalR connection

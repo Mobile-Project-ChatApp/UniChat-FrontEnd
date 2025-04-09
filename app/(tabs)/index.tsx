@@ -107,7 +107,7 @@ if (loading) {
               styles.chatItemContainer, 
               darkMode && styles.darkChatItemContainer
             ]}>
-              <Chat title={group.name} icon={DefaultGroupIcon} darkMode={darkMode} />
+              <Chat title={group.name} roomId= {group.id} icon={DefaultGroupIcon} darkMode={darkMode} />
             </View>
           ))}
         </View>

@@ -2,6 +2,8 @@ import React, { createContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { showToast } from "@/utils/showToast";
 import { useRouter } from "expo-router";
+import * as signalR from "@microsoft/signalr";
+
 import {
   registerUser,
   loginUser,
@@ -39,29 +41,51 @@ export const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [verificationEmail, setVerificationEmail] = useState<string | null>(
-    null
-  );
-  //const [users, setUsers] = useState<User[]>([]);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    //console.log("Current user:", user);
-  }, [user]);
-
-  useEffect(() => {
-    // Auto-login if token exists
     const loadUser = async () => {
       const accessToken = await AsyncStorage.getItem("accessToken");
-      if (!accessToken) {
+      const refreshToken = await AsyncStorage.getItem("refreshToken");
+
+      if (!accessToken || !refreshToken) {
+        console.log("No tokens found, user not logged in.");
         return;
       }
+
       try {
-        // Logic for handling access token
+        const profileRes = await fetchUserProfile(accessToken);
+        setUser(profileRes.data);
       } catch (error) {
-        // Error handling
+        console.error("Access token invalid or expired. Attempting to refresh...");
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (response.ok) {
+            const { accessToken: newAccessToken } = await response.json();
+            await AsyncStorage.setItem("accessToken", newAccessToken);
+
+            const profileRes = await fetchUserProfile(newAccessToken);
+            setUser(profileRes.data);
+          } else {
+            console.error("Failed to refresh token. Logging out...");
+            logout();
+          }
+        } catch (refreshError) {
+          console.error("Error refreshing token:", refreshError);
+          logout();
+        }
       }
     };
+
     loadUser();
   }, []);
 
@@ -133,6 +157,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const profileRes = await fetchUserProfile(accessToken);
       setUser(profileRes.data);
+
       showToast("success", "Login successful!", "Welcome back 👋");
       router.replace("/(tabs)");
     } catch (error: any) {
@@ -247,6 +272,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw error;
     }
   };
+
+  const getAccessToken = async (): Promise<string | null> => {
+    const token = await AsyncStorage.getItem("accessToken");
+    if (!token) {
+      console.error("Access token is missing");
+    }
+    return token;
+  };
+  
+  const connection = new signalR.HubConnectionBuilder()
+    .withUrl(`${API_BASE_URL}/hub`, {
+      accessTokenFactory: async () => {
+        const token = await AsyncStorage.getItem("accessToken");
+        return token || "";
+      },
+    })
+    .withAutomaticReconnect()
+    .build();
+  
+  connection.onclose(async (error) => {
+    console.error("SignalR connection closed:", error);
+
+    if (error?.message.includes("401")) {
+      console.log("Access token expired. Attempting to refresh...");
+
+      const refreshToken = await AsyncStorage.getItem("refreshToken");
+      if (refreshToken) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (response.ok) {
+            const { accessToken: newAccessToken } = await response.json();
+            await AsyncStorage.setItem("accessToken", newAccessToken);
+
+            // Restart the SignalR connection
+            await connection.start();
+            console.log("SignalR connection restarted successfully.");
+          } else {
+            console.error("Failed to refresh token. Logging out...");
+            logout();
+          }
+        } catch (refreshError) {
+          console.error("Error refreshing token:", refreshError);
+          logout();
+        }
+      } else {
+        console.error("No refresh token found. Logging out...");
+        logout();
+      }
+    }
+  });
 
   return (
     <AuthContext.Provider

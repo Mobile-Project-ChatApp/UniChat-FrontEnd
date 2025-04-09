@@ -1,4 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
+import { useLocalSearchParams } from "expo-router";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -20,9 +22,12 @@ import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import * as signalR from "@microsoft/signalr";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Chatroom() {
   const { title, icon, chatroomId }: any = useLocalSearchParams();
+  const { title, icon, roomId }: any = useLocalSearchParams(); // Assume roomId is passed as a parameter
   const { darkMode } = useContext(ThemeContext);
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -32,182 +37,130 @@ export default function Chatroom() {
     { id: "2", text: "Hey, how's it going?", time: "10:32 AM", sender: "me" },
     { id: "3", text: "All good! You?", time: "10:35 AM", sender: "other" },
   ]);
-  const [inputText, setInputText] = useState("");
-  const [announcementModalVisible, setAnnouncementModalVisible] = useState(false);
-  const [announcementTitle, setAnnouncementTitle] = useState("");
-  const [announcementContent, setAnnouncementContent] = useState("");
-  const [isImportant, setIsImportant] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Get user ID on component mount
+  const [messages, setMessages] = useState<{ id: string; text: string; time: string; sender: string }[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+
+  const getAccessToken = async () => {
+    const token = await AsyncStorage.getItem("accessToken"); // Retrieve token from storage
+    if (!token) {
+      console.error("Access token is missing");
+    }
+    return token;
+  };
+
+  const API_BASE_URL = "http://145.85.233.182:5222"; // Replace with your API base URL
+
   useEffect(() => {
-    const getUserId = async () => {
-      try {
-        console.log("Fetching user ID from AsyncStorage...");
-        const id = await AsyncStorage.getItem('userId');
-        console.log("User ID retrieved:", id);
-        setUserId(id);
-      } catch (error) {
-        console.error('Error retrieving user ID:', error);
-        Alert.alert("Error", "Could not get user data. Please try logging in again.");
+    // Initialize SignalR connection
+    const newConnection = new signalR.HubConnectionBuilder()
+      .withUrl(`${API_BASE_URL}/chatHub`, {
+
+        accessTokenFactory: async () => {
+          const token = await getAccessToken(); // Use the helper function
+          return token || ""; // Return the token or an empty string
+        },
+      })
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
+
+    setConnection(newConnection);
+
+    return () => {
+      // Cleanup connection on unmount
+      if (connection) {
+        connection.stop();
       }
     };
-    
-    getUserId();
-    console.log("Chatroom initialized with chatroomId:", chatroomId);
   }, []);
 
   useEffect(() => {
-    console.log("Modal visibility updated:", announcementModalVisible);
-  }, [announcementModalVisible]);
+    if (connection) {
+      connection
+        .start()
+        .then(async () => {
+          console.log("SignalR Connected.");
 
-  const sendMessage = () => {
-    if (inputText.trim() === "") return;
-    const newMessage = {
-      id: String(messages.length + 1),
-      text: inputText,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
-      sender: "me",
-    };
-    setMessages([newMessage, ...messages]);
-    setInputText("");
-  };
-
-  const sendAnnouncement = async () => {
-    console.log("Starting sendAnnouncement process...");
-    console.log("Input validation: Title:", announcementTitle.trim() ? "✓" : "✗", "Content:", announcementContent.trim() ? "✓" : "✗");
-    
-    if (announcementTitle.trim() === "" || announcementContent.trim() === "") {
-      console.log("Validation failed: Missing title or content");
-      Alert.alert("Error", "Please enter both a title and content for the announcement.");
-      return;
-    }
-
-    console.log("User ID check:", userId ? "✓" : "✗", "Chatroom ID check:", chatroomId ? "✓" : "✗");
-    if (!userId || !chatroomId) {
-      console.log("Validation failed: Missing user ID or chatroom ID");
-      Alert.alert("Error", "Missing user ID or chatroom ID.");
-      return;
-    }
-
-    setIsLoading(true);
-    console.log("Setting loading state to true");
-    
-    try {
-      // Prepare announcement data
-      console.log("Preparing announcement data...");
-      const parsedUserId = parseInt(userId);
-      const parsedChatroomId = parseInt(chatroomId);
-      
-      console.log("Parsed IDs - UserID:", parsedUserId, "ChatroomID:", parsedChatroomId);
-      
-      const announcementData = {
-        senderId: parsedUserId,
-        chatroomId: parsedChatroomId,
-        title: announcementTitle,
-        content: announcementContent,
-        important: isImportant,
-      };
-      
-      console.log("Announcement data prepared:", JSON.stringify(announcementData));
-      
-      // Get auth token
-      console.log("Fetching auth token...");
-      const token = await AsyncStorage.getItem('authToken');
-      console.log("Auth token retrieved:", token ? "✓" : "✗");
-      
-      if (!token) {
-        console.log("No auth token found");
-        Alert.alert("Authentication Error", "You need to be logged in to send announcements.");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Determine proper API URL based on platform
-      const apiBaseUrl = Platform.OS === 'web' 
-        ? 'http://localhost:5222' 
-        : 'http://10.0.2.2:5222'; // Use 10.0.2.2 for Android emulator
-
-      console.log(`Using API base URL: ${apiBaseUrl}`);
-      
-      // Make API call to create announcement
-      console.log("Sending API request to create announcement...");
-      const response = await axios.post(
-        `${apiBaseUrl}/api/Announcement`, 
-        announcementData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+          // Join the room
+          if (roomId) {
+            await connection.invoke("JoinRoom", parseInt(roomId));
+            console.log(`Joined room ${roomId}`);
           }
-        }
-      );
-      
-      console.log("API Response received. Status:", response.status);
-      console.log("Response data:", JSON.stringify(response.data));
-      
-      if (response.status === 200 || response.status === 201) {
-        console.log("Announcement sent successfully");
-        
-        // Add the announcement to the messages
+
+          // Handle receiving messages
+          connection.on("ReceiveMessage", (message) => {
+            setMessages((prevMessages) => [
+              {
+                id: message.id.toString(),
+                text: message.messageText,
+                time: new Date(message.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                }),
+                sender: message.sender.username,
+              },
+              ...prevMessages,
+            ]);
+          });
+
+          // Handle user joined
+          connection.on("UserJoined", (user) => {
+            console.log(`${user.username} joined the room`);
+          });
+
+          // Handle user left
+          connection.on("UserLeft", (username) => {
+            console.log(`${username} left the room`);
+          });
+        })
+        .catch((err) => console.error("SignalR Connection Error: ", err));
+    }
+
+    // Cleanup: Leave the room when unmounting
+    return () => {
+      if (connection && roomId) {
+        connection.invoke("LeaveRoom", parseInt(roomId)).then(() => {
+          console.log(`Left room ${roomId}`);
+        }).catch((err) => {
+          console.error("Error leaving room:", err);
+        });
+      }
+    };
+  }, [connection, roomId]);
+
+  const sendMessage = async () => {
+    if (!roomId) {
+      console.error("No room selected. Please join a room first.");
+      return;
+    }
+
+    if (inputText.trim() === "") {
+      console.error("Message is empty. Please type a message.");
+      return;
+    }
+
+    try {
+      if (connection) {
+        // Send the message to the backend
+        await connection.invoke("SendMessage", parseInt(roomId), inputText);
+
+        // Add the message locally
         const newMessage = {
           id: String(messages.length + 1),
-          text: `📢 ${isImportant ? '⚠️ ' : ''}${announcementTitle}: ${announcementContent}`,
+          text: inputText,
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
-          sender: "announcement",
+          sender: "me",
         };
-        
-        console.log("Adding announcement to messages:", newMessage);
         setMessages([newMessage, ...messages]);
-        
-        // Reset form fields
-        setAnnouncementTitle("");
-        setAnnouncementContent("");
-        setIsImportant(false);
-        setAnnouncementModalVisible(false);
-        console.log("Form fields reset and modal closed");
-      }
-    } catch (error) {
-      console.error("Error sending announcement:", error);
-      
-      if (axios.isAxiosError(error)) {
-        console.error("Axios error details:");
-        console.error("- Status:", error.response?.status);
-        console.error("- Status text:", error.response?.statusText);
-        console.error("- Response data:", JSON.stringify(error.response?.data));
-        console.error("- Request URL:", error.config?.url);
-        console.error("- Request method:", error.config?.method);
-        
-        if (error.response?.status === 401) {
-          Alert.alert("Authentication Error", "Your session has expired. Please log in again.");
-        } else if (error.response?.status === 403) {
-          Alert.alert("Permission Denied", "You don't have permission to send announcements in this chatroom.");
-        } else {
-          Alert.alert(
-            "Error",
-            `Failed to send announcement: ${error.response?.data?.message || error.message || 'Unknown error'}`
-          );
-        }
+        setInputText(""); // Clear the input field
       } else {
-        if (error instanceof Error) {
-          console.error("Non-Axios error:", error.message);
-        } else {
-          console.error("Unknown error:", error);
-        }
-        Alert.alert(
-          "Error", 
-          "Network or server problem. Please check your connection and try again."
-        );
+        console.error("Connection is not established.");
       }
-    } finally {
-      console.log("Resetting loading state");
-      setIsLoading(false);
+    } catch (err) {
+      console.error("Failed to send message:", err);
     }
-  };
-
-  const navigateToSendAnnouncement = () => {
-    console.log("Opening announcement modal...");
-    setAnnouncementModalVisible(true);
   };
 
   return (
@@ -241,14 +194,14 @@ export default function Chatroom() {
                 : item.sender === "announcement"
                 ? [styles.announcementMessage, darkMode && styles.darkAnnouncementMessage]
                 : [styles.otherMessage, darkMode && styles.darkOtherMessage],
+              styles.messageContainer,
+              item.sender === "me"
+                ? [styles.myMessage, darkMode && styles.darkMyMessage]
+                : [styles.otherMessage, darkMode && styles.darkOtherMessage],
             ]}
           >
-            <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>
-              {item.text}
-            </Text>
-            <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>
-              {item.time}
-            </Text>
+            <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>{item.text}</Text>
+            <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>{item.time}</Text>
           </View>
         )}
         contentContainerStyle={[styles.messagesList, darkMode && styles.darkMessagesList]}
@@ -264,6 +217,7 @@ export default function Chatroom() {
             style={[styles.input, darkMode && styles.darkInput]}
             value={inputText}
             onChangeText={setInputText}
+            onSubmitEditing={sendMessage} // Send message on Enter key press
           />
           <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
             <Ionicons name="send" size={24} color="white" />

@@ -5,15 +5,15 @@ import React, {
   useContext,
   useRef,
 } from "react";
-import { Notification } from "@/types/types";
+import { AppNotification } from "@/types/types";
 //import { fetchNotificationsByUser } from "@/api/notificationApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthContext } from "./AuthContext";
 import { sampleNotifications } from "@/hardcodedData/notifications";
 
 type NotificationContextType = {
-  notifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  notifications: AppNotification[];
+  setNotifications: React.Dispatch<React.SetStateAction<AppNotification[]>>;
   hasUnread: boolean;
 };
 
@@ -29,7 +29,7 @@ export const NotificationProvider = ({
   children: React.ReactNode;
 }) => {
   const { user } = useContext(AuthContext);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const hasInitialized = useRef(false);
 
   const hasUnread = notifications.some((n) => !n.read);

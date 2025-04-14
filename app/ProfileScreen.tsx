@@ -18,12 +18,20 @@ export default function ProfileScreen() {
   const [username, setUsername] = useState(authUser?.username || "");
   const [email, setEmail] = useState(authUser?.email || "");
   const [password, setPassword] = useState("");
-  const [semester, setSemester] = useState(authUser?.semester || "");
+  const [semester, setSemester] = useState(
+    authUser?.semester?.toString() || ""
+  );
   const [study, setStudy] = useState(authUser?.study || "");
 
   const handleUpdate = async () => {
     try {
-      const updatedUser = { username, email, password, semester, study };
+      const updatedUser = {
+        username,
+        email,
+        passwordHash: password,
+        semester: semester ? parseInt(semester) : undefined,
+        study,
+      };
       await updateUser(updatedUser);
       Alert.alert("Success", "Profile updated successfully");
       navigation.goBack();
@@ -74,7 +82,8 @@ export default function ProfileScreen() {
           style={styles.input}
           value={semester}
           onChangeText={setSemester}
-          placeholder="e.g. Spring 2025"
+          placeholder="e.g. 1"
+          keyboardType="numeric"
         />
       </View>
 

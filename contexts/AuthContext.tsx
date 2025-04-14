@@ -8,6 +8,7 @@ import {
   registerUser,
   loginUser,
   fetchUserProfile,
+  updateUserProfile,
 } from "@/services/authService";
 import User from "../types/Users";
 import { navigateToLogin } from "../services/navigationHelper";
@@ -22,6 +23,7 @@ type AuthContextType = {
     email: string;
     password: string;
   }) => Promise<void>;
+  updateUser: (data: Partial<User>) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<boolean>;
   verificationEmail: string | null;
@@ -34,6 +36,7 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
+  updateUser: async () => {},
   deleteAccount: async () => false,
   verificationEmail: null,
   setVerificationEmail: () => {},
@@ -41,7 +44,9 @@ export const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(
+    null
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -58,7 +63,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const profileRes = await fetchUserProfile(accessToken);
         setUser(profileRes.data);
       } catch (error) {
-        console.error("Access token invalid or expired. Attempting to refresh...");
+        console.error(
+          "Access token invalid or expired. Attempting to refresh..."
+        );
 
         try {
           const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
@@ -136,7 +143,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         "Registration successful!",
         "Please verify your email."
       );
-      //router.replace("/auth/emailVerification"); // Redirect to verify email screen
       router.replace("/auth/login");
     } catch (error: any) {
       showToast(
@@ -164,6 +170,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Login failed:", error);
       showToast("error", "Login failed", "Incorrect email or password.");
       router.replace("/WelcomeScreen");
+    }
+  };
+
+  // Update user profile
+  const updateUser = async (updatedUserData: Partial<User>) => {
+    try {
+      const accessToken = await AsyncStorage.getItem("accessToken");
+      if (!accessToken || !user?.id) throw new Error("Missing auth info");
+
+      const response = await updateUserProfile(
+        user.id,
+        updatedUserData,
+        accessToken
+      );
+
+      setUser(response.data);
+      await AsyncStorage.setItem("user", JSON.stringify(response.data));
+      await AsyncStorage.setItem("userData", JSON.stringify(response.data));
+    } catch (error) {
+      console.error("Update failed:", error);
     }
   };
 
@@ -280,7 +306,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     return token;
   };
-  
+
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${API_BASE_URL}/hub`, {
       accessTokenFactory: async () => {
@@ -290,7 +316,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     })
     .withAutomaticReconnect()
     .build();
-  
+
   connection.onclose(async (error) => {
     console.error("SignalR connection closed:", error);
 
@@ -337,6 +363,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser,
         login,
         register,
+        updateUser,
         logout,
         deleteAccount,
         verificationEmail,

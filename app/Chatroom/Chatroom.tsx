@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState, useContext, useEffect } from "react";
 import {
   View,
@@ -147,16 +147,41 @@ export default function Chatroom() {
     }
   };
 
+  const fetchChatroomInfo = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chatroom/${roomId}`);
+      const data = await response.json();
+      console.log("Chatroom info:", data);
+      console.log("Chatroom members:", data.members);
+    }
+    catch (error) {
+      console.error("Error fetching chatroom info:", error);
+    }
+  }
+  useEffect(() => {
+    fetchChatroomInfo();
+  }, []);
+
+  const EnterChatPage = () => {
+    console.log("Navigating to Chatroom with:", { title, icon });
+    router.push({
+      pathname: "/GroupChatPage",
+      params: { title, icon, roomId }, // Ensure roomId is passed here
+    })
+  }
+
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>
       <StatusBar style={darkMode ? "light" : "dark"} />
 
       {/* HEADER */}
       <SafeAreaView style={darkMode ? { backgroundColor: "#1E1E1E" } : { backgroundColor: "#f0f0f0" }}>
-        <View style={[styles.header, darkMode && styles.darkHeader]}>
-          <Image source={{ uri: icon }} style={styles.icon} />
-          <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
-        </View>
+        <TouchableOpacity onPress={ EnterChatPage }>
+          <View style={[styles.header, darkMode && styles.darkHeader]}>
+            <Image source={{ uri: icon }} style={styles.icon} />
+            <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
+          </View>
+        </TouchableOpacity>
       </SafeAreaView>
 
       {/* MESSAGES */}

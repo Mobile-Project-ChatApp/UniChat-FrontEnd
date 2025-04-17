@@ -185,6 +185,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         accessToken
       );
 
+      console.log("Updated user from backend:", response.data);
+
       setUser(response.data);
       await AsyncStorage.setItem("user", JSON.stringify(response.data));
       await AsyncStorage.setItem("userData", JSON.stringify(response.data));

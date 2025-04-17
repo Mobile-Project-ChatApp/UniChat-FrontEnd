@@ -72,7 +72,7 @@ export const updateUserProfile = async (
   },
   accessToken: string
 ): Promise<any> => {
-  return axiosInstance.put(`${API_URL_REG}/${userId}`, updatedData, {
+  return axiosInstance.patch(`${API_URL_REG}/${userId}`, updatedData, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

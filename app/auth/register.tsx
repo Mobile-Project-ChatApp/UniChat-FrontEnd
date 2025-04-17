@@ -84,13 +84,16 @@ export default function Register() {
       <Text style={styles.label}>Password</Text>
       <View style={styles.passwordContainer}>
         <TextInput
-          style={[styles.input, { flex: 1, borderWidth: 0 }]}
+          style={styles.input}
           placeholder="Enter your password"
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
         />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+          style={styles.eyeIcon}
+        >
           <MaterialIcons
             name={showPassword ? "visibility-off" : "visibility"}
             size={22}
@@ -102,7 +105,7 @@ export default function Register() {
       <Text style={styles.label}>Confirm Password</Text>
       <View style={styles.passwordContainer}>
         <TextInput
-          style={[styles.input, { flex: 1, borderWidth: 0 }]}
+          style={styles.input}
           placeholder="Confirm your password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -110,6 +113,7 @@ export default function Register() {
         />
         <TouchableOpacity
           onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          style={styles.eyeIcon}
         >
           <MaterialIcons
             name={showConfirmPassword ? "visibility-off" : "visibility"}
@@ -184,14 +188,16 @@ const styles = StyleSheet.create({
   },
 
   passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    position: "relative",
+    width: "100%",
     marginBottom: 15,
-    backgroundColor: "#fff",
+  },
+
+  eyeIcon: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    transform: [{ translateY: -20 }],
   },
 
   button: {

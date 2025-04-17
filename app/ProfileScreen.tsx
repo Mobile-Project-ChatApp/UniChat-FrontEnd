@@ -10,8 +10,6 @@ import {
 } from "react-native";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { showToast } from "@/utils/showToast";
 
 export default function ProfileScreen() {
   const { user: authUser, updateUser } = useContext(AuthContext);
@@ -19,33 +17,19 @@ export default function ProfileScreen() {
 
   const [username, setUsername] = useState(authUser?.username || "");
   const [email, setEmail] = useState(authUser?.email || "");
-  const [password, setPassword] = useState("");
   const [semester, setSemester] = useState(
     authUser?.semester?.toString() || ""
   );
   const [study, setStudy] = useState(authUser?.study || "");
-  const [showPassword, setShowPassword] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleUpdate = async () => {
-    if (password !== confirmPassword) {
-      showToast("error", "Password Mismatch", "Passwords do not match.");
-      return;
-    }
-
     try {
       const updatedUser = {
         username,
         email,
-        passwordHash: password,
         semester: semester ? parseInt(semester) : undefined,
         study,
       };
-
-      // if (password.trim()) {
-      //   updatedUser.passwordHash = password;
-      // }
 
       await updateUser(updatedUser);
       Alert.alert("Success", "Profile updated successfully");
@@ -78,48 +62,6 @@ export default function ProfileScreen() {
           keyboardType="email-address"
           placeholder="Enter email"
         />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={[styles.input, { flex: 1, borderWidth: 0 }]}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Enter new password"
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <MaterialIcons
-              name={showPassword ? "visibility-off" : "visibility"}
-              size={22}
-              color="#ccc"
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Confirm Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={[styles.input, { flex: 1, borderWidth: 0 }]}
-            placeholder="Confirm your password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={!showConfirmPassword}
-          />
-          <TouchableOpacity
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-          >
-            <MaterialIcons
-              name={showConfirmPassword ? "visibility-off" : "visibility"}
-              size={22}
-              color="#ccc"
-            />
-          </TouchableOpacity>
-        </View>
       </View>
 
       <View style={styles.inputGroup}>
@@ -176,15 +118,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    backgroundColor: "#f9f9f9",
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    paddingHorizontal: 10,
     backgroundColor: "#f9f9f9",
   },
 

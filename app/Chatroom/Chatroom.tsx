@@ -26,6 +26,8 @@ export default function Chatroom() {
   const [messages, setMessages] = useState<{ id: string; text: string; time: string; sender: string }[]>([]);
   const [inputText, setInputText] = useState("");
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+  const [members, setMembers] = useState<any[]>([]); // State to hold chatroom members
+  const [description, setDescription] = useState(""); // Add state for description
 
   const getAccessToken = async () => {
     const token = await AsyncStorage.getItem("accessToken"); // Retrieve token from storage
@@ -34,7 +36,6 @@ export default function Chatroom() {
     }
     return token;
   };
-
 
   useEffect(() => {
     // Initialize SignalR connection
@@ -151,24 +152,50 @@ export default function Chatroom() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/chatroom/${roomId}`);
       const data = await response.json();
+
       console.log("Chatroom info:", data);
       console.log("Chatroom members:", data.members);
-    }
-    catch (error) {
+
+      setDescription(data.description); // Store description in state
+      setMembers(data.members); // Update the members state
+
+      // Update the messages state with the fetched messages
+      const formattedMessages = data.messages.map((message: any) => ({
+        id: message.id.toString(),
+        text: message.messageText,
+        time: new Date(message.sentAt).toLocaleTimeString([], {
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }),
+        sender: message.sender?.username || "Unknown", // Handle cases where sender is null
+      }));
+      setMessages(formattedMessages);
+    } catch (error) {
       console.error("Error fetching chatroom info:", error);
     }
-  }
+  };
+
   useEffect(() => {
     fetchChatroomInfo();
   }, []);
 
   const EnterChatPage = () => {
-    console.log("Navigating to Chatroom with:", { title, icon });
+    console.log("Navigating to Chatroom with:", { title, icon, description });
     router.push({
       pathname: "/GroupChatPage",
-      params: { title, icon, roomId }, // Ensure roomId is passed here
-    })
-  }
+      params: { 
+        title, 
+        icon, 
+        roomId,
+        description,
+        members: JSON.stringify(members) // Serialize members
+      },
+    });
+  };
 
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>

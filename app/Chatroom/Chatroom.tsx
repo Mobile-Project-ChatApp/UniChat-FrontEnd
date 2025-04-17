@@ -103,14 +103,10 @@ export default function Chatroom() {
         .catch((err) => console.error("SignalR Connection Error: ", err));
     }
 
-    // Cleanup: Leave the room when unmounting
+    // Cleanup: Stop the connection but do not leave the room
     return () => {
-      if (connection && roomId) {
-        connection.invoke("LeaveRoom", parseInt(roomId)).then(() => {
-          console.log(`Left room ${roomId}`);
-        }).catch((err) => {
-          console.error("Error leaving room:", err);
-        });
+      if (connection) {
+        connection.stop();
       }
     };
   }, [connection, roomId]);

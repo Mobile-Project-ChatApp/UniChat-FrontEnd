@@ -5,8 +5,7 @@ import { useContext } from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { AuthContext } from '@/contexts/AuthContext';
 
-export default function GroupChatPage() {
-  const { user } = useContext(AuthContext);
+export default function GroupChatPage({ connection }: { connection: signalR.HubConnection | null }) {
   const { roomId, icon, title, members, description }: any = useLocalSearchParams();
   const { darkMode } = useContext(ThemeContext);
 
@@ -15,24 +14,30 @@ export default function GroupChatPage() {
   // Deserialize members
   const parsedMembers = members ? JSON.parse(members) : [];
 
-  const HandleBackPress = () => {
-    console.log("Back button pressed");
-    router.back();
+  const HandleLeaveGroup = async () => {
+    if (!roomId || !connection) {
+      console.error("No room selected or connection not established.");
+      return;
+    }
+
+    try {
+      await connection.invoke("LeaveRoom", parseInt(roomId));
+      console.log(`Left room ${roomId}`);
+      router.back(); // Navigate back after leaving the group
+    } catch (err) {
+      console.error("Error leaving room:", err);
+    }
   };
 
   const HandleEditPress = () => {
-    console.log("Edit button pressed");
-    console.log("Group ID:", roomId);
-    console.log("Group Icon:", icon);
-    console.log("Group Title:", title);
-    console.log("Members:", parsedMembers);
-  };
+    console.log("Edit pressed");
+  }
 
   return (
     <View style={styles.container}>
       <SafeAreaView>
         <View style={styles.header}>
-          <TouchableOpacity onPress={HandleBackPress}>
+          <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color="black" />
           </TouchableOpacity>
           <Text style={{ fontWeight: "bold" }}>Group Info</Text>
@@ -46,21 +51,32 @@ export default function GroupChatPage() {
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.description}>{description}</Text>
         </View>
+
         <Text style={styles.Memberstitle}>Members:</Text>
         <View style={styles.MembersCon}>
-          
-        {parsedMembers.slice(0, 8).map((member: any, index: number) => (
-          <View key={index} style={styles.MembersItem}>
-            <Image source={{ uri: member.avatar || defaultAvatar }} style={styles.icon} />
-            <Text>{member.username}</Text>
-          </View>
-        ))}
-        {parsedMembers.length > 8 && (
-          <View style={styles.MembersItem}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold' }}>...</Text>
-          </View>
-        )}
+          {parsedMembers.slice(0, 8).map((member: any, index: number) => (
+            <View key={index} style={styles.MembersItem}>
+              <Image source={{ uri: member.avatar || defaultAvatar }} style={styles.icon} />
+              <Text>{member.username}</Text>
+            </View>
+          ))}
+          {parsedMembers.length > 8 && (
+            <View style={styles.MembersItem}>
+              <Text style={{ fontSize: 24, fontWeight: "bold" }}>...</Text>
+            </View>
+          )}
+        </View>
 
+        <View style={styles.ButtonCon}>
+          <TouchableOpacity>
+            <Text style={styles.InviteBtn}>Invite People</Text>
+          </TouchableOpacity>
+          <TouchableOpacity>
+            <Text style={styles.InviteBtn}>Share Group</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={HandleLeaveGroup}>
+            <Text style={styles.LeaveBtn}>Leave Group</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </View>
@@ -108,19 +124,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#595959',
   },
-  // MembersCon: {
-  //   flexDirection: 'row',
-  //   alignItems: 'flex-start',
-  //   columnGap: 10,
-  //   backgroundColor: 'lightblue',
-  //   padding: 10,
-  // },
+
   MembersCon: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: 10,
-    rowGap: 10,
     padding: 10,
+    columnGap: 5,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
     backgroundColor: '#f0f0f0',
@@ -142,7 +151,36 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     fontSize: 17,
     fontWeight: '500',
-    color: '#595959',
   },
+
+  ButtonCon : {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    rowGap: 10,
+    marginTop: 10,
+  },
+
+  LeaveBtn: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    padding: 10,
+    backgroundColor: '#ff0000',
+    borderRadius: 10,
+  },
+
+  InviteBtn: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    padding: 10,
+    backgroundColor: '#2dffbf',
+    borderRadius: 10,
+  },
+
   
 });

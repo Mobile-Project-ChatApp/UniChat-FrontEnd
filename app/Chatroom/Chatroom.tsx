@@ -15,105 +15,57 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeContext } from "@/contexts/ThemeContext";
 import { StatusBar } from "expo-status-bar";
-import * as signalR from "@microsoft/signalr";
+import { initializeSignalRConnection, stopSignalRConnection, getSignalRConnection } from "../../utils/SignalRConnection";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../config/apiConfig"; // Import API_BASE_URL
 
+
 export default function Chatroom() {
-  const { title, icon, roomId }: any = useLocalSearchParams(); // Assume roomId is passed as a parameter
+  const { title, icon, roomId }: any = useLocalSearchParams();
   const { darkMode } = useContext(ThemeContext);
 
   const [messages, setMessages] = useState<{ id: string; text: string; time: string; sender: string }[]>([]);
   const [inputText, setInputText] = useState("");
-  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
-  const [members, setMembers] = useState<any[]>([]); // State to hold chatroom members
-  const [description, setDescription] = useState(""); // Add state for description
-
-  const getAccessToken = async () => {
-    const token = await AsyncStorage.getItem("accessToken"); // Retrieve token from storage
-    if (!token) {
-      console.error("Access token is missing");
-    }
-    return token;
-  };
+  const [members, setMembers] = useState<any[]>([]);
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
-    // Initialize SignalR connection
-    const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/chatHub`, {
+    const setupConnection = async () => {
+      const connection = await initializeSignalRConnection();
 
-        accessTokenFactory: async () => {
-          const token = await getAccessToken(); // Use the helper function
-          return token || ""; // Return the token or an empty string
-        },
-      })
-      .configureLogging(signalR.LogLevel.Information)
-      .build();
+      connection.on("ReceiveMessage", (message) => {
+        setMessages((prevMessages) => [
+          {
+            id: message.id.toString(),
+            text: message.messageText,
+            time: new Date(message.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }),
+            sender: message.sender.username,
+          },
+          ...prevMessages,
+        ]);
+      });
 
-    setConnection(newConnection);
-
-    return () => {
-      // Cleanup connection on unmount
-      if (connection) {
-        connection.stop();
+      if (roomId) {
+        await connection.invoke("JoinRoom", parseInt(roomId));
+        console.log(`Joined room ${roomId}`);
       }
     };
-  }, []);
 
-  useEffect(() => {
-    if (connection) {
-      connection
-        .start()
-        .then(async () => {
-          console.log("SignalR Connected.");
+    setupConnection();
 
-          // Join the room
-          if (roomId) {
-            await connection.invoke("JoinRoom", parseInt(roomId));
-            console.log(`Joined room ${roomId}`);
-          }
-
-          // Handle receiving messages
-          connection.on("ReceiveMessage", (message) => {
-            setMessages((prevMessages) => [
-              {
-                id: message.id.toString(),
-                text: message.messageText,
-                time: new Date(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                }),
-                sender: message.sender.username,
-              },
-              ...prevMessages,
-            ]);
-          });
-
-          // Handle user joined
-          connection.on("UserJoined", (user) => {
-            console.log(`${user.username} joined the room`);
-          });
-
-          // Handle user left
-          connection.on("UserLeft", (username) => {
-            console.log(`${username} left the room`);
-          });
-        })
-        .catch((err) => console.error("SignalR Connection Error: ", err));
-    }
-
-    // Cleanup: Stop the connection but do not leave the room
     return () => {
-      if (connection) {
-        connection.stop();
-      }
+      stopSignalRConnection();
     };
-  }, [connection, roomId]);
+  }, [roomId]);
 
   const sendMessage = async () => {
-    if (!roomId) {
-      console.error("No room selected. Please join a room first.");
+    const connection = getSignalRConnection();
+    if (!connection || !roomId) {
+      console.error("No connection or room selected.");
       return;
     }
 
@@ -123,22 +75,16 @@ export default function Chatroom() {
     }
 
     try {
-      if (connection) {
-        // Send the message to the backend
-        await connection.invoke("SendMessage", parseInt(roomId), inputText);
+      await connection.invoke("SendMessage", parseInt(roomId), inputText);
 
-        // Add the message locally
-        const newMessage = {
-          id: String(messages.length + 1),
-          text: inputText,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
-          sender: "me",
-        };
-        setMessages([newMessage, ...messages]);
-        setInputText(""); // Clear the input field
-      } else {
-        console.error("Connection is not established.");
-      }
+      const newMessage = {
+        id: String(messages.length + 1),
+        text: inputText,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
+        sender: "me",
+      };
+      setMessages([newMessage, ...messages]);
+      setInputText("");
     } catch (err) {
       console.error("Failed to send message:", err);
     }

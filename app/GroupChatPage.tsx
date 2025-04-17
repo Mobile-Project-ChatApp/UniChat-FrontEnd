@@ -1,11 +1,12 @@
 import { ThemeContext } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { AuthContext } from '@/contexts/AuthContext';
+import { getSignalRConnection } from "../utils/SignalRConnection"
 
-export default function GroupChatPage({ connection }: { connection: signalR.HubConnection | null }) {
+export default function GroupChatPage() {
+  const router = useRouter();
   const { roomId, icon, title, members, description }: any = useLocalSearchParams();
   const { darkMode } = useContext(ThemeContext);
 
@@ -15,8 +16,9 @@ export default function GroupChatPage({ connection }: { connection: signalR.HubC
   const parsedMembers = members ? JSON.parse(members) : [];
 
   const HandleLeaveGroup = async () => {
-    if (!roomId || !connection) {
-      console.error("No room selected or connection not established.");
+    const connection = getSignalRConnection();
+    if (!connection || !roomId) {
+      console.error("No connection or room selected.");
       return;
     }
 
@@ -24,6 +26,7 @@ export default function GroupChatPage({ connection }: { connection: signalR.HubC
       await connection.invoke("LeaveRoom", parseInt(roomId));
       console.log(`Left room ${roomId}`);
       router.back(); // Navigate back after leaving the group
+      router.back();
     } catch (err) {
       console.error("Error leaving room:", err);
     }

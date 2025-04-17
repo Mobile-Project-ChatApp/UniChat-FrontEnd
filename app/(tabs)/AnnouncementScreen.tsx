@@ -1,18 +1,33 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { SafeAreaView, Text, View, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { SafeAreaView, Text, View, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../contexts/ThemeContext';
-import { fetchAllAnnouncements, fetchImportantAnnouncements, fetchRecentAnnouncements } from '../../api/announcementsApi';
+import { AuthContext } from '../../contexts/AuthContext';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config/apiConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Announcement {
   id: number;
   title: string;
   content: string;
-  sender: string;
-  senderAvatar: string;
-  date: string;
+  dateCreated: string;
   important: boolean;
-  chatRoomId?: number;
+  chatroomId: number;
+  senderId: number;
+  sender?: {
+    username: string;
+    profilePicture?: string;
+  };
+  chatroom?: {
+    name: string;
+  };
+  formattedDate?: string;
+}
+
+interface Chatroom {
+  id: number;
+  name: string;
 }
 
 enum AnnouncementFilter {
@@ -23,38 +38,163 @@ enum AnnouncementFilter {
 
 export default function AnnouncementScreen() {
   const { darkMode } = useContext(ThemeContext);
+  const { user } = useContext(AuthContext);
+  const authContext = useContext(AuthContext) as any;
+  const contextToken = authContext.token;
+  
+  const [storedToken, setStoredToken] = useState<string | null>(null);
+  
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState<AnnouncementFilter>(AnnouncementFilter.ALL);
+  const [userChatrooms, setUserChatrooms] = useState<Chatroom[]>([]);
 
   useEffect(() => {
-    loadAnnouncements();
-  }, [currentFilter]);
+    const getTokenFromStorage = async () => {
+      try {
+        let token = await AsyncStorage.getItem('accessToken');
+        
+        if (!token) {
+          token = await AsyncStorage.getItem('authToken');
+        }
+        
+        if (!token) {
+          token = await AsyncStorage.getItem('token');
+        }
+
+        console.log('Token from AsyncStorage:', token ? 'Found' : 'Not found');
+        setStoredToken(token);
+      } catch (error) {
+        console.error('Error retrieving token from AsyncStorage:', error);
+      }
+    };
+    
+    getTokenFromStorage();
+  }, []);
+
+  const getEffectiveToken = () => {
+    return contextToken || storedToken;
+  };
+
+  useEffect(() => {
+    if (getEffectiveToken()) {
+      loadUserChatrooms();
+    }
+  }, [contextToken, storedToken]); 
+
+  useEffect(() => {
+    if (userChatrooms.length > 0) {
+      loadAnnouncements();
+    }
+  }, [currentFilter, userChatrooms, contextToken, storedToken]);
+
+  const loadUserChatrooms = async () => {
+    try {
+      const effectiveToken = getEffectiveToken();
+      
+      if (!effectiveToken) {
+        console.warn('No token available for API request');
+        setError("You need to be logged in to view announcements");
+        setLoading(false);
+        return;
+      }
+  
+      console.log('Making API request with token:', effectiveToken.substring(0, 10) + '...');
+      
+      // Using the correct endpoint from Swagger docs with proper capitalization
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/ChatRoom`, {
+          headers: {
+            Authorization: `Bearer ${effectiveToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Chatrooms API response:', response.status);
+        
+        if (Array.isArray(response.data)) {
+          console.log(`Received ${response.data.length} chatrooms`);
+          setUserChatrooms(response.data);
+        } else {
+          console.error('Unexpected response format:', response.data);
+          setError("Invalid chatroom data format");
+          setUserChatrooms([]);
+        }
+      } catch (error) {
+        console.error('Error fetching chatrooms:', error);
+        
+        if (axios.isAxiosError(error)) {
+          console.error('Axios error status:', error.response?.status);
+          console.error('Axios error data:', error.response?.data);
+        }
+        
+        setError("Failed to load your chatrooms");
+        setLoading(false);
+        setUserChatrooms([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user chatrooms:", err);
+      
+      if (axios.isAxiosError(err)) {
+        console.error('Axios error status:', err.response?.status);
+        console.error('Axios error data:', err.response?.data);
+      }
+      
+      setError("Failed to load your chatrooms");
+      setLoading(false);
+      setUserChatrooms([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadAnnouncements = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      let result;
-      switch (currentFilter) {
-        case AnnouncementFilter.IMPORTANT:
-          result = await fetchImportantAnnouncements();
-          break;
-        case AnnouncementFilter.RECENT:
-          result = await fetchRecentAnnouncements();
-          break;
-        case AnnouncementFilter.ALL:
-        default:
-          result = await fetchAllAnnouncements();
-          break;
-      }
+      const effectiveToken = getEffectiveToken();
       
-      // Format dates from API response
-      const formattedAnnouncements = result.map((announcement: any) => ({
+      if (!effectiveToken) {
+        console.warn('No token available for announcements API request');
+        setError("You need to be logged in to view announcements");
+        setLoading(false);
+        return;
+      }
+
+      let allAnnouncements: Announcement[] = [];
+
+      for (const chatroom of userChatrooms) {
+        let endpoint = `${API_BASE_URL}/api/Announcement/chatroom/${chatroom.id}`;
+        
+        if (currentFilter === AnnouncementFilter.IMPORTANT) {
+          endpoint += '/important';
+        } else if (currentFilter === AnnouncementFilter.RECENT) {
+          endpoint += '/recent';
+        }
+
+        try {
+          const response = await axios.get(endpoint, {
+            headers: {
+              Authorization: `Bearer ${effectiveToken}`
+            }
+          });
+
+          const chatroomAnnouncements = response.data;
+          allAnnouncements = [...allAnnouncements, ...chatroomAnnouncements];
+        } catch (chatroomErr) {
+          console.warn(`Failed to fetch announcements for chatroom ${chatroom.id}:`, chatroomErr);
+        }
+      }
+
+      allAnnouncements.sort((a, b) => 
+        new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime()
+      );
+      
+      const formattedAnnouncements = allAnnouncements.map(announcement => ({
         ...announcement,
-        date: new Date(announcement.date).toLocaleDateString('en-US', {
+        formattedDate: new Date(announcement.dateCreated).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
@@ -65,28 +205,7 @@ export default function AnnouncementScreen() {
     } catch (err) {
       console.error("Failed to fetch announcements:", err);
       setError("Failed to load announcements. Please try again later.");
-      
-      // For development purposes, load mock data when API fails
-      setAnnouncements([
-        {
-          id: 1,
-          title: "New Course Registration Open",
-          content: "Registration for Spring 2025 courses is now open. Please complete your registration by March 25th.",
-          sender: "Academic Office",
-          senderAvatar: "https://pbs.twimg.com/profile_images/1878018568199036928/rQEIyiM-_400x400.jpg",
-          date: "March 10, 2025",
-          important: true,
-        },
-        {
-          id: 2,
-          title: "Campus Wi-Fi Maintenance",
-          content: "The campus Wi-Fi network will undergo scheduled maintenance this weekend.",
-          sender: "IT Department",
-          senderAvatar: "https://pbs.twimg.com/media/FTI52wzVUAgCr3d.jpg:large",
-          date: "March 9, 2025",
-          important: false,
-        },
-      ]);
+      setAnnouncements([]);
     } finally {
       setLoading(false);
     }
@@ -96,59 +215,68 @@ export default function AnnouncementScreen() {
     setCurrentFilter(filter);
   };
 
-  const AnnouncementItem = ({ announcement }: { announcement: Announcement }) => (
-    <View style={[
-      styles.announcementItem,
-      darkMode && styles.darkAnnouncementItem
-    ]}>
-      {announcement.important && (
-        <View style={styles.importantBanner}>
-          <Ionicons name="warning" size={16} color="white" />
-          <Text style={styles.importantText}>Important</Text>
-        </View>
-      )}
-      <View style={styles.announcementHeader}>
-        <Text style={[
-          styles.announcementTitle,
-          darkMode && styles.darkText
-        ]}>{announcement.title}</Text>
-        <Text style={[
-          styles.announcementDate,
-          darkMode && styles.darkSecondaryText
-        ]}>{announcement.date}</Text>
-      </View>
-      <Text style={[
-        styles.announcementContent,
-        darkMode && styles.darkText
-      ]}>{announcement.content}</Text>
-      <View style={styles.senderInfo}>
-        <Image source={{ uri: announcement.senderAvatar }} style={styles.senderAvatar} />
-        <Text style={[
-          styles.senderName,
-          darkMode && styles.darkSecondaryText
-        ]}>From: {announcement.sender}</Text>
-      </View>
+  const AnnouncementItem = ({ announcement }: { announcement: Announcement }) => {
+    const getChatroomName = () => {
+      const chatroom = userChatrooms.find(room => room.id === announcement.chatroomId);
+      return chatroom?.name || "Unknown Group";
+    };
+
+    return (
       <View style={[
-        styles.actionButtons,
-        darkMode && styles.darkBorder
+        styles.announcementItem,
+        darkMode && styles.darkAnnouncementItem
       ]}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="bookmark-outline" size={20} color={darkMode ? "#82B1FF" : "#4A90E2"} />
+        <View style={styles.chatroomBadge}>
+          <Ionicons name="people" size={12} color="white" style={styles.badgeIcon} />
+          <Text style={styles.chatroomText}>
+            {getChatroomName()}
+          </Text>
+        </View>
+        
+        {announcement.important && (
+          <View style={styles.importantBanner}>
+            <Ionicons name="warning" size={16} color="white" />
+            <Text style={styles.importantText}>Important</Text>
+          </View>
+        )}
+        
+        <View style={styles.announcementHeader}>
           <Text style={[
-            styles.actionButtonText,
-            darkMode && styles.darkActionButtonText
-          ]}>Save</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="share-outline" size={20} color={darkMode ? "#82B1FF" : "#4A90E2"} />
+            styles.announcementTitle,
+            darkMode && styles.darkText
+          ]}>{announcement.title}</Text>
           <Text style={[
-            styles.actionButtonText,
-            darkMode && styles.darkActionButtonText
-          ]}>Share</Text>
-        </TouchableOpacity>
+            styles.announcementDate,
+            darkMode && styles.darkSecondaryText
+          ]}>{announcement.formattedDate || new Date(announcement.dateCreated).toLocaleDateString()}</Text>
+        </View>
+        
+        <Text style={[
+          styles.announcementContent,
+          darkMode && styles.darkText
+        ]}>{announcement.content}</Text>
+        
+        <View style={styles.senderInfo}>
+          {announcement.sender?.profilePicture ? (
+            <Image 
+              source={{ uri: announcement.sender.profilePicture }} 
+              style={styles.senderAvatar} 
+            />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarInitial}>
+                {announcement.sender?.username.charAt(0).toUpperCase() || "?"}
+              </Text>
+            </View>
+          )}
+          <Text style={[
+            styles.senderName,
+            darkMode && styles.darkSecondaryText
+          ]}>From: {announcement.sender?.username || "Unknown"}</Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={[
@@ -221,11 +349,18 @@ export default function AnnouncementScreen() {
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
+        ) : userChatrooms.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="information-circle" size={48} color={darkMode ? "#82B1FF" : "#4A90E2"} />
+            <Text style={[styles.emptyText, darkMode && styles.darkText]}>
+              You are not a member of any chatrooms
+            </Text>
+          </View>
         ) : announcements.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="information-circle" size={48} color={darkMode ? "#82B1FF" : "#4A90E2"} />
             <Text style={[styles.emptyText, darkMode && styles.darkText]}>
-              No announcements to display
+              No announcements to display in your chatrooms
             </Text>
           </View>
         ) : (
@@ -326,11 +461,33 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
   },
+  chatroomBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#4A90E2',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    zIndex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chatroomText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  badgeIcon: {
+    marginRight: 4,
+  },
   announcementHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 10,
+    marginTop: 15,
+    marginLeft: 5,
   },
   announcementTitle: {
     fontSize: 18,
@@ -357,6 +514,20 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     marginRight: 8,
+  },
+  avatarPlaceholder: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#4A90E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  avatarInitial: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   senderName: {
     fontSize: 14,

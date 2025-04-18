@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Text,
   View,
@@ -29,6 +30,13 @@ export default function SettingsScreen() {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
   const navigation = useNavigation<AppNavigationProp>();
+
+  useFocusEffect(
+    useCallback(() => {
+      // Reset private profile toggle to off every time screen is focused
+      setPrivateProfile(false);
+    }, [])
+  );
 
   useEffect(() => {
     console.log("Current authUser:", authUser);
@@ -144,7 +152,14 @@ export default function SettingsScreen() {
             title="Private Profile"
             isToggle={true}
             isOn={privateProfile}
-            onPress={() => setPrivateProfile(!privateProfile)}
+            onPress={() => {
+              const newValue = !privateProfile;
+
+              setPrivateProfile(newValue);
+              if (newValue) {
+                router.push("/PrivateProfile");
+              }
+            }}
             icon="lock-closed"
             darkMode={darkMode}
           />

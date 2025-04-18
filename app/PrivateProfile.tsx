@@ -9,13 +9,14 @@ import {
   ScrollView,
 } from "react-native";
 import { AuthContext } from "../contexts/AuthContext";
-import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { showToast } from "@/utils/showToast";
+import { resetPassword } from "@/services/authService";
 
-export default function ProfileScreen() {
-  const { user: authUser, updateUser } = useContext(AuthContext);
-  const navigation = useNavigation();
+export default function PrivateProfile() {
+  const { user: authUser } = useContext(AuthContext);
+  const router = useRouter();
 
   const [email, setEmail] = useState(authUser?.email || "");
   const [password, setPassword] = useState("");
@@ -30,16 +31,12 @@ export default function ProfileScreen() {
     }
 
     try {
-      const updatedPrivateInfo = {
-        email,
-        password,
-      };
-
-      await updateUser(updatedPrivateInfo);
-      Alert.alert("Success", "Information updated successfully");
-      navigation.goBack();
+      await resetPassword(email, password);
+      showToast("success", "Password reset successfully. ", "Please log in.");
+      router.replace("/auth/login");
     } catch (error) {
-      Alert.alert("Error", "Failed to update profile");
+      console.error("Reset error:", error);
+      showToast("error", "Error", "Failed to send reset link.");
     }
   };
 
@@ -50,11 +47,11 @@ export default function ProfileScreen() {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, styles.disabledInput]}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
-          placeholder="Enter email"
+          editable={false}
         />
       </View>
 
@@ -100,6 +97,10 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <Text style={styles.noteText}>
+        Password updated successfully? You’ll need to sign in again to continue.
+      </Text>
+
       <TouchableOpacity style={styles.saveButton} onPress={handleUpdateInfo}>
         <Text style={styles.saveButtonText}>Save Changes</Text>
       </TouchableOpacity>
@@ -135,6 +136,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#f9f9f9",
   },
+  disabledInput: {
+    backgroundColor: "#f1f1f1",
+    color: "#aaa",
+  },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -143,6 +148,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     backgroundColor: "#f9f9f9",
+  },
+
+  noteText: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 10,
   },
 
   saveButton: {

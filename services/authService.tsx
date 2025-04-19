@@ -69,6 +69,7 @@ export const updateUserProfile = async (
     passwordHash?: string;
     semester?: number;
     study?: string;
+    profilePicture?: string;
   },
   accessToken: string
 ): Promise<any> => {

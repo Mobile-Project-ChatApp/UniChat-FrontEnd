@@ -19,6 +19,7 @@ import { User, SettingItemProps, AppNavigationProp } from "../../types/types";
 import { AuthContext } from "../../contexts/AuthContext";
 import { ThemeContext } from "../../contexts/ThemeContext";
 import { useRouter } from "expo-router";
+import { API_BASE_URL } from "@/config/apiConfig";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -79,30 +80,30 @@ export default function SettingsScreen() {
     );
   };
 
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
+  // const pickImage = async () => {
+  //   try {
+  //     const result = await ImagePicker.launchImageLibraryAsync({
+  //       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //       allowsEditing: true,
+  //       aspect: [1, 1],
+  //       quality: 1,
+  //     });
 
-      if (!result.canceled && authUser) {
-        const updatedUser = {
-          ...authUser,
-          profilePicture: result.assets[0].uri,
-        };
+  //     if (!result.canceled && authUser) {
+  //       const updatedUser = {
+  //         ...authUser,
+  //         profilePicture: result.assets[0].uri,
+  //       };
 
-        await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-        await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
-        Alert.alert("Success", "Profile picture updated successfully!");
-      }
-    } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to update profile picture.");
-    }
-  };
+  //       await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+  //       await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
+  //       Alert.alert("Success", "Profile picture updated successfully!");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error picking image:", error);
+  //     Alert.alert("Error", "Failed to update profile picture.");
+  //   }
+  // };
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
@@ -110,19 +111,16 @@ export default function SettingsScreen() {
 
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.profileSection}>
-          <TouchableOpacity onPress={pickImage}>
+          <TouchableOpacity onPress={() => router.push("/AvatarScreen")}>
             <Image
-              source={{
-                uri:
-                  authUser?.profilePicture ||
-                  "@/assets/images/avatar/default-avatar.jpeg",
-              }}
+              source={{ uri: `${API_BASE_URL}${authUser?.profilePicture}` }}
               style={styles.profileImage}
             />
             <View style={styles.cameraIconContainer}>
               <Ionicons name="camera" size={18} color="white" />
             </View>
           </TouchableOpacity>
+
           <Text style={[styles.username, darkMode && styles.darkText]}>
             {authUser?.username || "Guest"}
           </Text>
@@ -373,5 +371,23 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  avatarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginVertical: 10,
+  },
+  avatarOption: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    margin: 8,
+    borderWidth: 2,
+    borderColor: "#ccc",
+  },
+  avatarSelected: {
+    borderColor: "#4A90E2",
+    borderWidth: 3,
   },
 });

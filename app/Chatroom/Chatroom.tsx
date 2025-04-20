@@ -1,8 +1,4 @@
-<<<<<<<<< Temporary merge branch 1
-import { router, useLocalSearchParams } from "expo-router";
-=========
 import { useLocalSearchParams, useRouter } from "expo-router";
->>>>>>>>> Temporary merge branch 2
 import React, { useState, useContext, useEffect } from "react";
 import {
   View,
@@ -301,7 +297,7 @@ export default function Chatroom() {
     }
   };
 
-<<<<<<<<< Temporary merge branch 1
+  // Function from branch 1 to fetch chatroom info
   const fetchChatroomInfo = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/chatroom/${roomId}`);
@@ -313,10 +309,12 @@ export default function Chatroom() {
       console.error("Error fetching chatroom info:", error);
     }
   }
+  
   useEffect(() => {
     fetchChatroomInfo();
   }, []);
 
+  // Function from branch 1 to navigate to GroupChatPage
   const EnterChatPage = () => {
     console.log("Navigating to Chatroom with:", { title, icon });
     router.push({
@@ -324,8 +322,8 @@ export default function Chatroom() {
       params: { title, icon, roomId }, // Ensure roomId is passed here
     })
   }
-=========
-  // Open announcement modal
+
+  // Open announcement modal - from branch 2
   const navigateToSendAnnouncement = () => {
     // Reset form state
     setAnnouncementTitle("");
@@ -336,6 +334,7 @@ export default function Chatroom() {
     setAnnouncementModalVisible(true);
   };
 
+  // Send announcement function from branch 2
   const sendAnnouncement = async () => {
     if (announcementTitle.trim() === "" || announcementContent.trim() === "") {
       Alert.alert("Error", "Please enter both a title and content for the announcement.");
@@ -425,52 +424,46 @@ export default function Chatroom() {
     }
   };
 
-  // Force userId for dev mode testing
+  // Force userId for dev mode testing - from branch 2
   useEffect(() => {
     if (__DEV__ && !userId) {
       setUserId("3"); // Default test ID for development
     }
   }, [userId]);
->>>>>>>>> Temporary merge branch 2
 
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>
       <StatusBar style={darkMode ? "light" : "dark"} />
 
-      {/* HEADER */}
+      {/* HEADER - Combined from both branches */}
       <SafeAreaView style={darkMode ? { backgroundColor: "#1E1E1E" } : { backgroundColor: "#f0f0f0" }}>
-<<<<<<<<< Temporary merge branch 1
-        <TouchableOpacity onPress={ EnterChatPage }>
+        <TouchableOpacity onPress={EnterChatPage}>
           <View style={[styles.header, darkMode && styles.darkHeader]}>
             <Image source={{ uri: icon }} style={styles.icon} />
             <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
+            
+            {/* Added from branch 2 */}
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => {
+                // Show list of languages or navigate to settings
+                router.push('/(tabs)/SettingsScreen');
+              }}
+            >
+              <Ionicons name="language" size={22} color={darkMode ? "#fff" : "#000"} />
+            </TouchableOpacity>
+            
+            {/* Only show announcement button if user has permission */}
+            {(canSendAnnouncements || __DEV__) && (
+              <TouchableOpacity
+                style={styles.announcementButton}
+                onPress={navigateToSendAnnouncement}
+              >
+                <Ionicons name="notifications" size={24} color={darkMode ? "#fff" : "#000"} />
+              </TouchableOpacity>
+            )}
           </View>
         </TouchableOpacity>
-=========
-        <View style={[styles.header, darkMode && styles.darkHeader]}>
-          <Image source={{ uri: icon }} style={styles.icon} />
-          <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
-          <TouchableOpacity
-            style={styles.languageButton}
-            onPress={() => {
-              // Show list of languages or navigate to settings
-              router.push('/(tabs)/SettingsScreen');
-            }}
-          >
-            <Ionicons name="language" size={22} color={darkMode ? "#fff" : "#000"} />
-          </TouchableOpacity>
-          
-          {/* Only show announcement button if user has permission */}
-          {(canSendAnnouncements || __DEV__) && (
-            <TouchableOpacity
-              style={styles.announcementButton}
-              onPress={navigateToSendAnnouncement}
-            >
-              <Ionicons name="notifications" size={24} color={darkMode ? "#fff" : "#000"} />
-            </TouchableOpacity>
-          )}
-        </View>
->>>>>>>>> Temporary merge branch 2
       </SafeAreaView>
 
       {/* MESSAGES */}

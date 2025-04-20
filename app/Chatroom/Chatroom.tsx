@@ -30,7 +30,7 @@ export default function Chatroom() {
   const router = useRouter();
 
   // Original chat state
-  const [messages, setMessages] = useState<{ id: string; text: string; time: string; sender: string }[]>([]);
+  const [messages, setMessages] = useState<{ id: string; text: string; originalText?: string; time: string; sender: string; isTranslated?: boolean }[]>([]);
   const [inputText, setInputText] = useState("");
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
 
@@ -44,6 +44,10 @@ export default function Chatroom() {
   const [isImportant, setIsImportant] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  //Translation States
+  const [targetLanguage, setTargetLanguage] = useState<string>("en");
+  const [showingOriginal, setShowingOriginal] = useState<{[key: string]: boolean}>({});
+
   // Extract user info from token
   const extractUserInfoFromToken = (token: string) => {
     try {
@@ -54,6 +58,52 @@ export default function Chatroom() {
     } catch (error) {
       console.error("Error extracting user info from token:", error);
       return null;
+    }
+  };
+  //useEffect to load the language preference
+  useEffect(() => {
+    const loadLanguagePreference = async () => {
+      try {
+        const savedLanguage = await AsyncStorage.getItem("preferredLanguage");
+        if (savedLanguage) {
+          console.log("Loaded language preference:", savedLanguage);
+          setTargetLanguage(savedLanguage);
+        }
+      } catch (error) {
+        console.error("Error loading language preference:", error);
+      }
+    };
+    
+    loadLanguagePreference();
+  }, []);
+
+  // Translation function
+  const translateText = async (text: string, targetLang: string): Promise<string> => {
+    try {
+      if (targetLang === "en") return text; // Skip translation for English (or your default)
+      
+      // Use your preferred translation API - this example uses a mock for demonstration
+      // In production, you'd replace this with an actual API call
+      const API_KEY = "https://translate.googleapis.com"; // Replace with your API key
+      
+      // Example using Google Translate API (you'll need to set this up)
+      const response = await axios.post(
+        "https://translation.googleapis.com/language/translate/v2",
+        {},
+        {
+          params: {
+            q: text,
+            target: targetLang,
+            key: API_KEY,
+          },
+        }
+      );
+      
+      // Return translated text from response
+      return response.data.data.translations[0].translatedText;
+    } catch (error) {
+      console.error("Translation error:", error);
+      return text; // Fallback to original text if translation fails
     }
   };
 
@@ -160,17 +210,33 @@ export default function Chatroom() {
           }
 
           // Handle receiving messages
-          connection.on("ReceiveMessage", (message) => {
+          connection.on("ReceiveMessage", async (message) => {
+            // Only translate messages from others (not from current user)
+            let translatedText = message.messageText;
+            
+            // Check if sender is not the current user
+            const isFromOthers = message.sender.username !== "me";
+            
+            if (isFromOthers && targetLanguage !== "en") {
+              try {
+                translatedText = await translateText(message.messageText, targetLanguage);
+              } catch (e) {
+                console.error("Translation failed:", e);
+              }
+            }
+            
             setMessages((prevMessages) => [
               {
                 id: message.id.toString(),
-                text: message.messageText,
+                text: translatedText,
+                originalText: message.messageText, // Store original text
                 time: new Date(message.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                   hour12: true,
                 }),
                 sender: message.sender.username,
+                isTranslated: isFromOthers && translatedText !== message.messageText,
               },
               ...prevMessages,
             ]);
@@ -347,6 +413,15 @@ export default function Chatroom() {
         <View style={[styles.header, darkMode && styles.darkHeader]}>
           <Image source={{ uri: icon }} style={styles.icon} />
           <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
+          <TouchableOpacity
+            style={styles.languageButton}
+            onPress={() => {
+              // Show list of languages or navigate to settings
+              router.push('/(tabs)/SettingsScreen');
+            }}
+          >
+            <Ionicons name="language" size={22} color={darkMode ? "#fff" : "#000"} />
+          </TouchableOpacity>
           
           {/* Only show announcement button if user has permission */}
           {(canSendAnnouncements || __DEV__) && (
@@ -380,8 +455,25 @@ export default function Chatroom() {
                 {item.sender}
               </Text>
             )}
-            <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>{item.text}</Text>
-            <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>{item.time}</Text>
+            <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>
+              {showingOriginal[item.id] && item.originalText ? item.originalText : item.text}
+            </Text>
+            {item.isTranslated && (
+              <TouchableOpacity 
+                onPress={() => setShowingOriginal(prev => ({
+                  ...prev, 
+                  [item.id]: !prev[item.id]
+                }))}
+                style={styles.translatedToggle}
+              >
+                <Text style={styles.translatedIndicator}>
+                  {showingOriginal[item.id] ? "(Showing original text)" : "(Translated - tap to see original)"}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>
+              {item.time}
+            </Text>
           </View>
         )}
         contentContainerStyle={[styles.messagesList, darkMode && styles.darkMessagesList]}
@@ -754,5 +846,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: '#666',
-  }
+  },
+  translatedIndicator: {
+    fontSize: 10,
+    color: "#888",
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  translatedToggle: {
+    marginTop: 2,
+  },
+  languageButton: {
+    marginLeft: 10,
+    padding: 8,
+  },
 });

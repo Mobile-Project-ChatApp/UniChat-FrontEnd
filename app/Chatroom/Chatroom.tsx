@@ -1,4 +1,8 @@
-import { router, useLocalSearchParams, useRouter } from "expo-router";
+<<<<<<<<< Temporary merge branch 1
+import { router, useLocalSearchParams } from "expo-router";
+=========
+import { useLocalSearchParams, useRouter } from "expo-router";
+>>>>>>>>> Temporary merge branch 2
 import React, { useState, useContext, useEffect } from "react";
 import {
   View,
@@ -297,6 +301,30 @@ export default function Chatroom() {
     }
   };
 
+<<<<<<<<< Temporary merge branch 1
+  const fetchChatroomInfo = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chatroom/${roomId}`);
+      const data = await response.json();
+      console.log("Chatroom info:", data);
+      console.log("Chatroom members:", data.members);
+    }
+    catch (error) {
+      console.error("Error fetching chatroom info:", error);
+    }
+  }
+  useEffect(() => {
+    fetchChatroomInfo();
+  }, []);
+
+  const EnterChatPage = () => {
+    console.log("Navigating to Chatroom with:", { title, icon });
+    router.push({
+      pathname: "/GroupChatPage",
+      params: { title, icon, roomId }, // Ensure roomId is passed here
+    })
+  }
+=========
   // Open announcement modal
   const navigateToSendAnnouncement = () => {
     // Reset form state
@@ -403,28 +431,7 @@ export default function Chatroom() {
       setUserId("3"); // Default test ID for development
     }
   }, [userId]);
-  const fetchChatroomInfo = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/chatroom/${roomId}`);
-      const data = await response.json();
-      console.log("Chatroom info:", data);
-      console.log("Chatroom members:", data.members);
-    }
-    catch (error) {
-      console.error("Error fetching chatroom info:", error);
-    }
-  }
-  useEffect(() => {
-    fetchChatroomInfo();
-  }, []);
-
-  const EnterChatPage = () => {
-    console.log("Navigating to Chatroom with:", { title, icon });
-    router.push({
-      pathname: "/GroupChatPage",
-      params: { title, icon, roomId }, // Ensure roomId is passed here
-    })
-  }
+>>>>>>>>> Temporary merge branch 2
 
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>
@@ -432,6 +439,14 @@ export default function Chatroom() {
 
       {/* HEADER */}
       <SafeAreaView style={darkMode ? { backgroundColor: "#1E1E1E" } : { backgroundColor: "#f0f0f0" }}>
+<<<<<<<<< Temporary merge branch 1
+        <TouchableOpacity onPress={ EnterChatPage }>
+          <View style={[styles.header, darkMode && styles.darkHeader]}>
+            <Image source={{ uri: icon }} style={styles.icon} />
+            <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
+          </View>
+        </TouchableOpacity>
+=========
         <View style={[styles.header, darkMode && styles.darkHeader]}>
           <Image source={{ uri: icon }} style={styles.icon} />
           <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
@@ -455,12 +470,7 @@ export default function Chatroom() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity onPress={ EnterChatPage }>
-          <View style={[styles.header, darkMode && styles.darkHeader]}>
-            <Image source={{ uri: icon }} style={styles.icon} />
-            <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
-          </View>
-        </TouchableOpacity>
+>>>>>>>>> Temporary merge branch 2
       </SafeAreaView>
 
       {/* MESSAGES */}

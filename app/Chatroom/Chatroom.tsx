@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState, useContext, useEffect } from "react";
 import {
   View,
@@ -297,112 +297,28 @@ export default function Chatroom() {
     }
   };
 
-  // Open announcement modal
-  const navigateToSendAnnouncement = () => {
-    // Reset form state
-    setAnnouncementTitle("");
-    setAnnouncementContent("");
-    setIsImportant(false);
-    
-    // Show the modal
-    setAnnouncementModalVisible(true);
-  };
-
-  const sendAnnouncement = async () => {
-    if (announcementTitle.trim() === "" || announcementContent.trim() === "") {
-      Alert.alert("Error", "Please enter both a title and content for the announcement.");
-      return;
-    }
-  
-    if (!userId || !roomId) {
-      Alert.alert("Error", "Missing user ID or room ID.");
-      return;
-    }
-  
-    setIsLoading(true);
-  
+  const fetchChatroomInfo = async () => {
     try {
-      const parsedUserId = parseInt(userId);
-      const parsedChatroomId = parseInt(roomId);
-  
-      if (isNaN(parsedUserId) || isNaN(parsedChatroomId)) {
-        Alert.alert("Error", "Invalid user or chatroom identifier.");
-        return;
-      }
-  
-      const announcementData = {
-        senderId: parsedUserId,
-        chatroomId: parsedChatroomId,
-        title: announcementTitle,
-        content: announcementContent,
-        important: isImportant,
-      };
-  
-      const token = await getAccessToken();
-  
-      if (!token) {
-        Alert.alert("Authentication Error", "You need to be logged in to send announcements.");
-        return;
-      }
-  
-      console.log("Sending announcement data:", announcementData);
-  
-      const response = await axios.post(
-        `${API_BASE_URL}/api/Announcement`,
-        announcementData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-  
-      console.log("Backend response:", response.data);
-  
-      if (response.status === 200 || response.status === 201) {
-        Alert.alert("Success", "Announcement sent successfully!");
-        // Close the modal after successful submission
-        setAnnouncementModalVisible(false);
-        setAnnouncementTitle("");
-        setAnnouncementContent("");
-        setIsImportant(false);
-      } else {
-        Alert.alert("Warning", "Announcement may not have been sent correctly.");
-      }
-    } catch (error) {
-      console.error("Error sending announcement:", error);
-  
-      if (axios.isAxiosError(error)) {
-        console.error("Axios error details:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-        });
-  
-        if (error.response?.status === 500) {
-          Alert.alert("Server Error", "An internal server error occurred. Please try again later.");
-        } else if (error.response?.status === 401) {
-          Alert.alert("Authentication Error", "Your session has expired. Please log in again.");
-        } else if (error.response?.status === 403) {
-          Alert.alert("Permission Denied", "You don't have permission to send announcements in this chatroom.");
-        } else {
-          Alert.alert("Error", `Failed to send announcement: ${error.response?.data?.message || error.message}`);
-        }
-      } else {
-        Alert.alert("Network Error", "Could not connect to the server. Please check your internet connection.");
-      }
-    } finally {
-      setIsLoading(false);
+      const response = await fetch(`${API_BASE_URL}/api/chatroom/${roomId}`);
+      const data = await response.json();
+      console.log("Chatroom info:", data);
+      console.log("Chatroom members:", data.members);
     }
-  };
-
-  // Force userId for dev mode testing
+    catch (error) {
+      console.error("Error fetching chatroom info:", error);
+    }
+  }
   useEffect(() => {
-    if (__DEV__ && !userId) {
-      setUserId("3"); // Default test ID for development
-    }
-  }, [userId]);
+    fetchChatroomInfo();
+  }, []);
+
+  const EnterChatPage = () => {
+    console.log("Navigating to Chatroom with:", { title, icon });
+    router.push({
+      pathname: "/GroupChatPage",
+      params: { title, icon, roomId }, // Ensure roomId is passed here
+    })
+  }
 
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>
@@ -410,29 +326,12 @@ export default function Chatroom() {
 
       {/* HEADER */}
       <SafeAreaView style={darkMode ? { backgroundColor: "#1E1E1E" } : { backgroundColor: "#f0f0f0" }}>
-        <View style={[styles.header, darkMode && styles.darkHeader]}>
-          <Image source={{ uri: icon }} style={styles.icon} />
-          <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
-          <TouchableOpacity
-            style={styles.languageButton}
-            onPress={() => {
-              // Show list of languages or navigate to settings
-              router.push('/(tabs)/SettingsScreen');
-            }}
-          >
-            <Ionicons name="language" size={22} color={darkMode ? "#fff" : "#000"} />
-          </TouchableOpacity>
-          
-          {/* Only show announcement button if user has permission */}
-          {(canSendAnnouncements || __DEV__) && (
-            <TouchableOpacity
-              style={styles.announcementButton}
-              onPress={navigateToSendAnnouncement}
-            >
-              <Ionicons name="notifications" size={24} color={darkMode ? "#fff" : "#000"} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity onPress={ EnterChatPage }>
+          <View style={[styles.header, darkMode && styles.darkHeader]}>
+            <Image source={{ uri: icon }} style={styles.icon} />
+            <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
+          </View>
+        </TouchableOpacity>
       </SafeAreaView>
 
       {/* MESSAGES */}

@@ -1,7 +1,5 @@
 import axiosInstance from "@/utils/axiosInstance";
 
-//import { API_BASE_URL } from "@env";
-
 const API_URL_REG = "/api/users";
 const API_URL_LOG = "/auth";
 
@@ -63,12 +61,24 @@ export const fetchUserProfile = async (accessToken: string): Promise<any> => {
   });
 };
 
-// export const verifyEmailCode = async (
-//   email: string,
-//   code: string
-// ): Promise<any> => {
-//   return axiosInstance.post(`${API_URL}/verify-email`, { email, code });
-// };
+export const updateUserProfile = async (
+  userId: number,
+  updatedData: {
+    username?: string;
+    email?: string;
+    passwordHash?: string;
+    semester?: number;
+    study?: string;
+    profilePicture?: string;
+  },
+  accessToken: string
+): Promise<any> => {
+  return axiosInstance.patch(`${API_URL_REG}/${userId}`, updatedData, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+};
 
 // Test connection function to debug connectivity issues
 // export const testConnection = async (): Promise<boolean> => {

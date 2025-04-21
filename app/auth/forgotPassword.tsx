@@ -12,10 +12,14 @@ import {
 import { useRouter } from "expo-router";
 import { showToast } from "@/utils/showToast";
 import { resetPassword } from "@/services/authService";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -44,53 +48,85 @@ export default function ForgotPassword() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Forgot Password 🔐</Text>
-        <Text style={styles.subtitle}>
-          Enter your email to reset your password.
-        </Text>
+      <Text style={styles.title}>Forgot Password 🔐</Text>
+      <Text style={styles.subtitle}>
+        Enter your email to reset your password.
+      </Text>
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <Text style={styles.label}>New Password</Text>
+      <Text style={styles.label}>Email</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter your email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+
+      <Text style={styles.label}>New Password</Text>
+      <View style={styles.passwordContainer}>
         <TextInput
           style={styles.input}
           placeholder="Enter your new password"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
+          secureTextEntry={!showPassword}
         />
-
-        {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#4A69BD"
-            style={{ marginTop: 20 }}
-          />
-        ) : (
-          <TouchableOpacity
-            style={[styles.button, !email && styles.disabledButton]}
-            disabled={!email || !password}
-            onPress={handleReset}
-          >
-            <Text style={styles.buttonText}>Submit</Text>
-          </TouchableOpacity>
-        )}
-
         <TouchableOpacity
-          onPress={() => router.replace("/auth/login")}
-          style={styles.backToLogin}
+          onPress={() => setShowPassword(!showPassword)}
+          style={styles.eyeIcon}
         >
-          <Text style={styles.clickText}>← Back to Login</Text>
+          <MaterialIcons
+            name={showPassword ? "visibility-off" : "visibility"}
+            size={22}
+            color="#ccc"
+          />
         </TouchableOpacity>
       </View>
+
+      <Text style={styles.label}>Confirm Password</Text>
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Confirm your password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showConfirmPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          style={styles.eyeIcon}
+        >
+          <MaterialIcons
+            name={showConfirmPassword ? "visibility-off" : "visibility"}
+            size={22}
+            color="#ccc"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#4A69BD"
+          style={{ marginTop: 20 }}
+        />
+      ) : (
+        <TouchableOpacity
+          style={[styles.button, !email && styles.disabledButton]}
+          disabled={!email || !password}
+          onPress={handleReset}
+        >
+          <Text style={styles.buttonText}>Submit</Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity
+        onPress={() => router.replace("/auth/login")}
+        style={styles.backToLogin}
+      >
+        <Text style={styles.clickText}>← Back to Login</Text>
+      </TouchableOpacity>
     </KeyboardAvoidingView>
   );
 }
@@ -125,19 +161,29 @@ const styles = StyleSheet.create({
 
   label: {
     color: "#333",
-    marginBottom: 6,
+    alignSelf: "flex-start",
+    marginBottom: 5,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "bold",
   },
 
   input: {
     width: "100%",
     padding: 12,
-    marginBottom: 16,
+    marginBottom: 15,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
+  },
+
+  passwordContainer: { position: "relative", marginBottom: 15 },
+
+  eyeIcon: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    transform: [{ translateY: -20 }],
   },
 
   button: {

@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useContext } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { AuthContext } from "@/contexts/AuthContext";
+import { API_BASE_URL } from "@/config/apiConfig";
 
 interface HeaderProps {
   username: string;
@@ -17,6 +19,7 @@ export default function Header({
   hasUnreadNotifications,
 }: HeaderProps) {
   const router = useRouter();
+  const { user: authUser } = useContext(AuthContext);
 
   const handleNotificationPress = () => {
     router.push("/NotificationScreen");
@@ -25,7 +28,11 @@ export default function Header({
     <View style={[styles.container, darkMode && styles.darkContainer]}>
       <View style={styles.userInfo}>
         <Image
-          source={typeof avatar === "string" ? { uri: avatar } : avatar}
+          source={
+            typeof avatar === "string"
+              ? { uri: `${API_BASE_URL}${authUser?.profilePicture}` }
+              : avatar
+          }
           style={styles.avatar}
         />
         <Text style={[styles.username, darkMode && styles.darkText]}>

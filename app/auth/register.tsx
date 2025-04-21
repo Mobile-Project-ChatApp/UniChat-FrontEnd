@@ -10,13 +10,14 @@ import {
 import { showToast } from "@/utils/showToast";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useRouter } from "expo-router";
-import { ThemeContext } from '../../contexts/ThemeContext';
-import { createThemedStyles } from '../../assets/ThemeStyle';
+import { ThemeContext } from "../../contexts/ThemeContext";
+import { createThemedStyles } from "../../assets/ThemeStyle";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export const useTheme = () => {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const styles = createThemedStyles(darkMode);
-  
+
   return { darkMode, toggleDarkMode, styles };
 };
 
@@ -28,10 +29,17 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = async () => {
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !confirmPassword) {
       showToast("error", "Missing Fields", "Please fill in all fields.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      showToast("error", "Password Mismatch", "Passwords do not match.");
       return;
     }
 
@@ -74,13 +82,46 @@ export default function Register() {
       />
 
       <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+          style={styles.eyeIcon}
+        >
+          <MaterialIcons
+            name={showPassword ? "visibility-off" : "visibility"}
+            size={22}
+            color="#ccc"
+          />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.label}>Confirm Password</Text>
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Confirm your password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showConfirmPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          style={styles.eyeIcon}
+        >
+          <MaterialIcons
+            name={showConfirmPassword ? "visibility-off" : "visibility"}
+            size={22}
+            color="#ccc"
+          />
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
         <ActivityIndicator
@@ -92,9 +133,10 @@ export default function Register() {
         <TouchableOpacity
           style={[
             styles.button,
-            (!username || !email || !password) && styles.disabledButton,
+            (!username || !email || !password || !confirmPassword) &&
+              styles.disabledButton,
           ]}
-          disabled={!username || !email || !password}
+          disabled={!username || !email || !password || !confirmPassword}
           onPress={handleRegister}
         >
           <Text style={styles.buttonText}>Create Account</Text>
@@ -143,6 +185,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
+  },
+
+  passwordContainer: {
+    position: "relative",
+    width: "100%",
+    marginBottom: 15,
+  },
+
+  eyeIcon: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    transform: [{ translateY: -20 }],
   },
 
   button: {

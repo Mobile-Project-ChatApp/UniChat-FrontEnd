@@ -1,5 +1,4 @@
 import axios, { AxiosInstance } from "axios";
-import { Platform } from 'react-native';
 import { API_BASE_URL } from "../config/apiConfig"; // Import API_BASE_URL
 
 // Log the selected base URL for debugging
@@ -10,15 +9,19 @@ const axiosInstance: AxiosInstance = axios.create({
   withCredentials: true,
   timeout: 20000, // Increased timeout to 20 seconds
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  }
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
 });
 
 // Add request interceptor for better error handling
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log(`Sending request to: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    console.log(
+      `Sending request to: ${config.method?.toUpperCase()} ${config.baseURL}${
+        config.url
+      }`
+    );
     return config;
   },
   (error) => {
@@ -34,7 +37,7 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.code === 'ECONNABORTED') {
+    if (error.code === "ECONNABORTED") {
       console.error("Request timeout. Server might be down or unreachable.");
     } else if (error.response) {
       console.error(`Server responded with status: ${error.response.status}`);
@@ -44,7 +47,7 @@ axiosInstance.interceptors.response.use(
       console.error("Request details:", {
         baseURL: error.config?.baseURL,
         url: error.config?.url,
-        method: error.config?.method
+        method: error.config?.method,
       });
     } else {
       console.error("Error setting up request:", error.message);

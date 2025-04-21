@@ -27,11 +27,13 @@ export interface GroupChat {
 
 // Type for notification
 export type NotificationType = "invite" | "kick" | "mention" | "announcement";
-export interface Notification {
+export interface AppNotification {
   id: string;
   type: NotificationType;
   content: string;
   read: boolean;
+  targetGroupId?: number;
+  groupName?: string;
 }
 
 // Type for SettingItem props

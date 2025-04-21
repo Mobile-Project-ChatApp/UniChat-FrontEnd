@@ -38,4 +38,7 @@ config/apiConfig.ts
 # typescript
 *.tsbuildinfo
 
+#config
+apiConfig.ts
+
 app-example

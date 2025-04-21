@@ -12,6 +12,8 @@ import { ThemeContext } from "../contexts/ThemeContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
 import ModalBase from "react-native-modal";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { AppNotification } from "@/types/types";
 
 const filters = ["All", "Mentioned", "Unread", "Announcements"];
 
@@ -24,6 +26,20 @@ export default function NotificationScreen() {
     string | null
   >(null);
   const { notifications, setNotifications } = useContext(NotificationContext);
+  const router = useRouter();
+
+  const handleNotificationPress = (notification: AppNotification) => {
+    if (notification.targetGroupId) {
+      //console.log("Navigating to Chatroom with:", { title, icon });
+      router.push({
+        pathname: "/Chatroom/Chatroom",
+        params: {
+          title: notification.groupName,
+          roomId: notification.targetGroupId.toString(),
+        },
+      });
+    }
+  };
 
   const handleMarkRead = useCallback((id: string) => {
     setNotifications((prev) =>
@@ -130,6 +146,7 @@ export default function NotificationScreen() {
               onMarkRead={() => handleMarkRead(item.id)}
               onDelete={() => handleDelete(item.id)}
               onMorePress={() => openModal(item.id)}
+              onPress={() => handleNotificationPress(item)}
             />
           )}
         />

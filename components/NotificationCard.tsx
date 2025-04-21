@@ -11,6 +11,7 @@ interface NotificationCardProps {
   onDelete: () => void;
   onMorePress: () => void;
   darkMode?: boolean;
+  onPress?: () => void;
 }
 
 function NotificationCard({
@@ -19,6 +20,7 @@ function NotificationCard({
   read,
   onMorePress,
   darkMode,
+  onPress,
 }: NotificationCardProps) {
   const getIcon = () => {
     switch (type) {
@@ -35,29 +37,33 @@ function NotificationCard({
   };
 
   return (
-    <View
-      style={[
-        styles.card,
-        read && styles.readCard,
-        darkMode && styles.darkCard,
-      ]}
-    >
-      <MaterialIcons
-        name={getIcon()}
-        size={24}
-        color={darkMode ? "#82B1FF" : "#4A90E2"}
-        style={styles.icon}
-      />
-      <Text style={[styles.text, darkMode && styles.darkText]}>{content}</Text>
-
-      <TouchableOpacity onPress={onMorePress}>
+    <TouchableOpacity onPress={onPress}>
+      <View
+        style={[
+          styles.card,
+          read && styles.readCard,
+          darkMode && styles.darkCard,
+        ]}
+      >
         <MaterialIcons
-          name="more-horiz"
-          size={20}
-          color={darkMode ? "#aaa" : "#666"}
+          name={getIcon()}
+          size={24}
+          color={darkMode ? "#82B1FF" : "#4A90E2"}
+          style={styles.icon}
         />
-      </TouchableOpacity>
-    </View>
+        <Text style={[styles.text, darkMode && styles.darkText]}>
+          {content}
+        </Text>
+
+        <TouchableOpacity onPress={onMorePress}>
+          <MaterialIcons
+            name="more-horiz"
+            size={20}
+            color={darkMode ? "#aaa" : "#666"}
+          />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 }
 

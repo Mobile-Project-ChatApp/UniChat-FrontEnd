@@ -1,13 +1,25 @@
 import React, { useState, useEffect, useContext, useCallback } from "react";
-import { Text, View, StyleSheet, Image, TouchableOpacity, Switch, ScrollView, Alert, Modal, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
-import { User, SettingItemProps, AppNavigationProp } from '../../types/types';
-import { AuthContext } from '../../contexts/AuthContext';
-import { ThemeContext } from '../../contexts/ThemeContext';
+import { useFocusEffect } from "@react-navigation/native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Switch,
+  ScrollView,
+  Alert,
+  Modal,
+  FlatList,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import { User, SettingItemProps, AppNavigationProp } from "../../types/types";
+import { AuthContext } from "../../contexts/AuthContext";
+import { ThemeContext } from "../../contexts/ThemeContext";
 import { useRouter } from "expo-router";
 import { API_BASE_URL } from "@/config/apiConfig";
 
@@ -15,9 +27,9 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [onlineStatus, setOnlineStatus] = useState(true);
   const [privateProfile, setPrivateProfile] = useState(false);
-  
-  const [language, setLanguage] = useState('English');
-  const [languageCode, setLanguageCode] = useState('en');
+
+  const [language, setLanguage] = useState("English");
+  const [languageCode, setLanguageCode] = useState("en");
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const { user: authUser, logout, deleteAccount } = useContext(AuthContext);
@@ -26,18 +38,18 @@ export default function SettingsScreen() {
   const navigation = useNavigation<AppNavigationProp>();
 
   const LANGUAGES = [
-    { code: 'en', name: 'English' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'fr', name: 'French' },
-    { code: 'de', name: 'German' },
-    { code: 'zh', name: 'Chinese (Simplified)' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'ar', name: 'Arabic' },
-    { code: 'ru', name: 'Russian' },
-    { code: 'pt', name: 'Portuguese' },
-    { code: 'hi', name: 'Hindi' },
+    { code: "en", name: "English" },
+    { code: "es", name: "Spanish" },
+    { code: "fr", name: "French" },
+    { code: "de", name: "German" },
+    { code: "zh", name: "Chinese (Simplified)" },
+    { code: "ja", name: "Japanese" },
+    { code: "ar", name: "Arabic" },
+    { code: "ru", name: "Russian" },
+    { code: "pt", name: "Portuguese" },
+    { code: "hi", name: "Hindi" },
   ];
-  
+
   useFocusEffect(
     useCallback(() => {
       // Reset private profile toggle to off every time screen is focused
@@ -61,33 +73,37 @@ export default function SettingsScreen() {
   useEffect(() => {
     const loadLanguagePreference = async () => {
       try {
-        const savedLanguageCode = await AsyncStorage.getItem('preferredLanguage');
+        const savedLanguageCode = await AsyncStorage.getItem(
+          "preferredLanguage"
+        );
         if (savedLanguageCode) {
           setLanguageCode(savedLanguageCode);
           // Find the language name for the saved code
-          const languageItem = LANGUAGES.find(lang => lang.code === savedLanguageCode);
+          const languageItem = LANGUAGES.find(
+            (lang) => lang.code === savedLanguageCode
+          );
           if (languageItem) {
             setLanguage(languageItem.name);
           }
         }
       } catch (error) {
-        console.error('Error loading language preference:', error);
+        console.error("Error loading language preference:", error);
       }
     };
-    
+
     loadLanguagePreference();
   }, []);
 
   // Handle language selection
   const selectLanguage = async (code: string, name: string) => {
     try {
-      await AsyncStorage.setItem('preferredLanguage', code);
+      await AsyncStorage.setItem("preferredLanguage", code);
       setLanguageCode(code);
       setLanguage(name);
       setShowLanguageModal(false);
     } catch (error) {
-      console.error('Error saving language preference:', error);
-      Alert.alert('Error', 'Failed to save language preference.');
+      console.error("Error saving language preference:", error);
+      Alert.alert("Error", "Failed to save language preference.");
     }
   };
 
@@ -210,30 +226,31 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.sectionContainer}>
-
-        <Text style={[styles.sectionTitle, darkMode && styles.darkText]}>Appearance</Text>
-        <SettingItem
-          title="Language"
-          value={language}
-          onPress={() => setShowLanguageModal(true)}
-          icon="globe"
-          darkMode={darkMode}
-        />
-        <SettingItem
-          title="Dark Mode"
-          isToggle={true}
-          isOn={darkMode}
-          onPress={toggleDarkMode}
-          icon="contrast"
-          darkMode={darkMode}
-        />
+          <Text style={[styles.sectionTitle, darkMode && styles.darkText]}>
+            Appearance
+          </Text>
+          <SettingItem
+            title="Language"
+            value={language}
+            onPress={() => setShowLanguageModal(true)}
+            icon="globe"
+            darkMode={darkMode}
+          />
+          <SettingItem
+            title="Dark Mode"
+            isToggle={true}
+            isOn={darkMode}
+            onPress={toggleDarkMode}
+            icon="contrast"
+            darkMode={darkMode}
+          />
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogOut}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
-      
+
       {/* Language Selection Modal */}
       <Modal
         visible={showLanguageModal}
@@ -242,11 +259,15 @@ export default function SettingsScreen() {
         onRequestClose={() => setShowLanguageModal(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, darkMode && styles.darkModalContent]}>
-            <Text style={[styles.modalTitle, darkMode && styles.darkModalTitle]}>
+          <View
+            style={[styles.modalContent, darkMode && styles.darkModalContent]}
+          >
+            <Text
+              style={[styles.modalTitle, darkMode && styles.darkModalTitle]}
+            >
               Select Language
             </Text>
-            
+
             <FlatList
               data={LANGUAGES}
               keyExtractor={(item) => item.code}
@@ -269,17 +290,26 @@ export default function SettingsScreen() {
                     {item.name}
                   </Text>
                   {languageCode === item.code && (
-                    <Ionicons name="checkmark" size={22} color={darkMode ? "#82B1FF" : "#4A90E2"} />
+                    <Ionicons
+                      name="checkmark"
+                      size={22}
+                      color={darkMode ? "#82B1FF" : "#4A90E2"}
+                    />
                   )}
                 </TouchableOpacity>
               )}
             />
-            
+
             <TouchableOpacity
               style={[styles.closeButton, darkMode && styles.darkCloseButton]}
               onPress={() => setShowLanguageModal(false)}
             >
-              <Text style={[styles.closeButtonText, darkMode && styles.darkCloseButtonText]}>
+              <Text
+                style={[
+                  styles.closeButtonText,
+                  darkMode && styles.darkCloseButtonText,
+                ]}
+              >
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -480,72 +510,72 @@ const styles = StyleSheet.create({
     borderColor: "#4A90E2",
     borderWidth: 3,
   },
-  
+
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    width: '85%',
-    backgroundColor: '#fff',
+    width: "85%",
+    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 20,
-    maxHeight: '70%',
+    maxHeight: "70%",
   },
   darkModalContent: {
-    backgroundColor: '#333',
+    backgroundColor: "#333",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    color: '#000',
-    textAlign: 'center',
+    color: "#000",
+    textAlign: "center",
   },
   darkModalTitle: {
-    color: '#fff',
+    color: "#fff",
   },
   languageItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   darkLanguageItem: {
-    borderBottomColor: '#333',
+    borderBottomColor: "#333",
   },
   selectedLanguageItem: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: "#f0f8ff",
   },
   languageText: {
     fontSize: 16,
-    color: '#000',
+    color: "#000",
   },
   selectedLanguageText: {
-    fontWeight: 'bold',
-    color: '#4A90E2',
+    fontWeight: "bold",
+    color: "#4A90E2",
   },
   closeButton: {
     marginTop: 20,
     padding: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   darkCloseButton: {
-    backgroundColor: '#444',
+    backgroundColor: "#444",
   },
   closeButtonText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: "500",
+    color: "#333",
   },
   darkCloseButtonText: {
-    color: '#fff',
+    color: "#fff",
   },
 });

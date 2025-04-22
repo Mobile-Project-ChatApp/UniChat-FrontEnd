@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { User, SettingItemProps, AppNavigationProp } from "../../types/types";
@@ -135,31 +134,6 @@ export default function SettingsScreen() {
       ]
     );
   };
-
-  // const pickImage = async () => {
-  //   try {
-  //     const result = await ImagePicker.launchImageLibraryAsync({
-  //       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  //       allowsEditing: true,
-  //       aspect: [1, 1],
-  //       quality: 1,
-  //     });
-
-  //     if (!result.canceled && authUser) {
-  //       const updatedUser = {
-  //         ...authUser,
-  //         profilePicture: result.assets[0].uri,
-  //       };
-
-  //       await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-  //       await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
-  //       Alert.alert("Success", "Profile picture updated successfully!");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error picking image:", error);
-  //     Alert.alert("Error", "Failed to update profile picture.");
-  //   }
-  // };
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>

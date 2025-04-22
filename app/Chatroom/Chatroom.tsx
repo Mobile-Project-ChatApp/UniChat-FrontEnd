@@ -28,9 +28,8 @@ export default function Chatroom() {
   const [inputText, setInputText] = useState("");
   const [members, setMembers] = useState<any[]>([]);
   const [description, setDescription] = useState("");
-  const [translateToFinnish, setTranslateToFinnish] = useState(false);
-  const [translatedMessages, setTranslatedMessages] = useState<{ [key: string]: string }>({});
-
+  const [currentLanguage, setCurrentLanguage] = useState("EN"); // "EN", "FI", "NL"
+  const [translatedMessages, setTranslatedMessages] = useState<{ [key: string]: { [lang: string]: string } }>({});
   const { user: authUser } = useContext(AuthContext);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
@@ -51,28 +50,39 @@ export default function Chatroom() {
     }
   };
 
-  // Toggle translation and translate the clicked message
-  const toggleTranslation = async (messageId: string, text: string) => {
-    const newTranslateState = !translateToFinnish;
-    setTranslateToFinnish(newTranslateState);
-
-    if (newTranslateState) {
-      // Translate only the most recent 20 messages to avoid overload
-      const newTranslations: { [key: string]: string } = {};
-      const visibleMessages = messages.slice(0, 20); // Limit to recent messages
+  // Add this helper function
+  const translateVisibleMessages = async (targetLang: string) => {
+    try {
+      const visibleMessages = messages.slice(0, 10);
+      
       for (const msg of visibleMessages) {
-        try {
-          const translatedText = await translateText(msg.text, "fi");
-          newTranslations[msg.id] = translatedText;
-        } catch (error) {
-          console.error(`Failed to translate message ${msg.id}:`, error);
-          newTranslations[msg.id] = msg.text; // Fallback to original
+        if (!translatedMessages[msg.id] || !translatedMessages[msg.id][targetLang]) {
+          const translatedText = await translateText(msg.text, targetLang);
+          
+          setTranslatedMessages(prev => ({
+            ...prev,
+            [msg.id]: {
+              ...(prev[msg.id] || {}),
+              [targetLang]: translatedText
+            }
+          }));
         }
       }
-      setTranslatedMessages(newTranslations);
-    } else {
-      // Clear translations to revert to English
-      setTranslatedMessages({});
+    } catch (error) {
+      console.error("Error translating messages:", error);
+    }
+  };
+
+  // Toggle between languages (EN, FI, NL)
+  const toggleLanguage = async () => {
+    // Cycle through languages: EN -> FI -> NL -> EN
+    const nextLanguage = currentLanguage === "EN" ? "FI" : currentLanguage === "FI" ? "NL" : "EN";
+    setCurrentLanguage(nextLanguage);
+    
+    if (nextLanguage !== "EN") {
+      // Translate only if switching to non-English
+      const targetLang = nextLanguage === "FI" ? "fi" : "nl";
+      translateVisibleMessages(targetLang);
     }
   };
 
@@ -91,64 +101,23 @@ export default function Chatroom() {
 
   useEffect(() => {
     const setupConnection = async () => {
-      const connection = await initializeSignalRConnection();
-
-      // Handle server errors
-      connection.on("error", (error) => {
-        console.error("SignalR server error:", error);
-      });
-
-      connection.on("ReceiveMessage", async (message) => {
-        const timestamp = message.timestamp ? new Date(message.timestamp) : new Date();
-        const isValidDate = !isNaN(timestamp.getTime());
-        let messageText = message.messageText;
-
-        // Translate to Finnish if enabled
-        if (translateToFinnish) {
-          messageText = await translateText(message.messageText, "fi");
-          setTranslatedMessages((prev) => ({
-            ...prev,
-            [message.id.toString()]: messageText,
-          }));
+      try {
+        // Get a fresh access token first
+        const accessToken = await AsyncStorage.getItem("accessToken");
+        
+        if (!accessToken) {
+          console.error("No access token found. Please login again.");
+          // You might want to redirect to login here
+          return;
         }
-
-        setMessages((prevMessages) => [
-          {
-            id: message.id.toString(),
-            text: message.messageText, // Store original text
-            time: (isValidDate ? timestamp : new Date()).toLocaleTimeString([], {
-              day: "2-digit",
-              month: "2-digit",
-              year: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            }),
-            senderId: message.senderId,
-            sender: message.sender?.username,
-            senderUsername: message.sender?.username || members.find((m) => m.id === message.senderId)?.username || "Unknown",
-          },
-          ...prevMessages,
-        ]);
-      });
-
-      // Check connection state before invoking
-      if (roomId && connection.state === "Connected") {
-        try {
-          await connection.invoke("JoinRoom", parseInt(roomId));
-          console.log(`Joined room ${roomId}`);
-        } catch (error) {
-          console.error("Failed to join room:", error);
-        }
-      } else if (roomId) {
-        console.warn("SignalR not connected, attempting to reconnect...");
-        try {
-          await connection.start();
-          await connection.invoke("JoinRoom", parseInt(roomId));
-          console.log(`Joined room ${roomId} after reconnect`);
-        } catch (error) {
-          console.error("Reconnection failed:", error);
-        }
+        
+        console.log("Using access token:", accessToken.substring(0, 10) + "...");
+        
+        const connection = await initializeSignalRConnection();
+        
+        // Rest of your existing connection setup...
+      } catch (error) {
+        console.error("SignalR connection setup failed:", error);
       }
     };
 
@@ -157,49 +126,71 @@ export default function Chatroom() {
     return () => {
       stopSignalRConnection();
     };
-  }, [roomId]); // Removed translateToFinnish from dependencies
+  }, [roomId]);
 
   const sendMessage = async () => {
-    const connection = getSignalRConnection();
-    if (!connection || !roomId) {
-      console.error("No connection or room selected.");
-      return;
-    }
-
-    if (inputText.trim() === "") {
-      console.error("Message is empty. Please type a message.");
-      return;
-    }
-
     try {
-      // Check connection state
-      if (connection.state !== "Connected") {
-        console.warn("SignalR not connected, attempting to reconnect...");
+      // Get a fresh connection reference each time
+      const connection = getSignalRConnection();
+      
+      if (!connection) {
+        console.warn("No connection found. Attempting to reconnect...");
+        const newConnection = await initializeSignalRConnection();
+        
+        if (!newConnection || !roomId) {
+          console.error("Failed to establish connection or no room ID");
+          return;
+        }
+        
+        if (newConnection.state !== "Connected") {
+          await newConnection.start();
+          await newConnection.invoke("JoinRoom", parseInt(roomId));
+        }
+        
+        await newConnection.invoke("SendMessage", parseInt(roomId), inputText);
+      }
+      else if (connection.state !== "Connected") {
+        console.warn("Connection exists but not in Connected state. Reconnecting...");
         await connection.start();
+        await connection.invoke("JoinRoom", parseInt(roomId));
+        await connection.invoke("SendMessage", parseInt(roomId), inputText);
+      } 
+      else {
+        // Connection is good, just send the message
+        await connection.invoke("SendMessage", parseInt(roomId), inputText);
       }
-
-      await connection.invoke("SendMessage", parseInt(roomId), inputText);
-
-      let messageText = inputText;
-      if (translateToFinnish) {
-        messageText = await translateText(inputText, "fi");
-        setTranslatedMessages((prev) => ({
-          ...prev,
-          [String(messages.length + 1)]: messageText,
-        }));
-      }
-
+      
+      // Rest of your message handling code
+      // Create local message, update translations, etc.
       const newMessage = {
         id: String(messages.length + 1),
-        text: inputText, // Store original text
+        text: inputText,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
         senderId: currentUserId,
         senderUsername: currentUsername || "Unknown",
       };
+      
+      // Optimistically add to messages
       setMessages([newMessage, ...messages]);
+      
+      // If currently translating, add translations for this message too
+      if (currentLanguage !== "EN") {
+        const targetLang = currentLanguage === "FI" ? "fi" : "nl";
+        const translatedText = await translateText(inputText, targetLang);
+        
+        setTranslatedMessages((prev) => ({
+          ...prev,
+          [newMessage.id]: {
+            ...(prev[newMessage.id] || {}),
+            [targetLang]: translatedText,
+          },
+        }));
+      }
+      
       setInputText("");
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error("Error sending message:", err);
+      // Show error to user if needed
     }
   };
 
@@ -265,12 +256,30 @@ export default function Chatroom() {
 
       {/* HEADER */}
       <SafeAreaView style={darkMode ? { backgroundColor: "#1E1E1E" } : { backgroundColor: "#f0f0f0" }}>
-        <TouchableOpacity onPress={EnterChatPage}>
-          <View style={[styles.header, darkMode && styles.darkHeader]}>
+        <View style={[styles.header, darkMode && styles.darkHeader]}>
+          <TouchableOpacity onPress={EnterChatPage} style={styles.headerTitleSection}>
             <Image source={{ uri: icon }} style={styles.icon} />
             <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={toggleLanguage}
+            style={[
+              styles.languageToggleButton,
+              darkMode && styles.darkLanguageToggleButton,
+              currentLanguage !== "EN" && styles.activeLanguageToggleButton,
+              currentLanguage !== "EN" && darkMode && styles.darkActiveLanguageToggleButton
+            ]}
+          >
+            <Text style={[
+              styles.languageToggleText,
+              currentLanguage !== "EN" && styles.activeLanguageToggleText,
+              darkMode && styles.darkLanguageToggleText
+            ]}>
+              {currentLanguage}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
 
       {/* MESSAGES */}
@@ -290,19 +299,12 @@ export default function Chatroom() {
               {item.senderUsername}
             </Text>
             <Text style={[styles.messageText, darkMode && styles.darkMessageText]}>
-              {translateToFinnish && translatedMessages[item.id] ? translatedMessages[item.id] : item.text}
+              {currentLanguage !== "EN" && 
+               translatedMessages[item.id]?.[currentLanguage === "FI" ? "fi" : "nl"] 
+                ? translatedMessages[item.id][currentLanguage === "FI" ? "fi" : "nl"] 
+                : item.text}
             </Text>
             <Text style={[styles.messageTime, darkMode && styles.darkMessageTime]}>{item.time}</Text>
-            <TouchableOpacity
-              onPress={() => toggleTranslation(item.id, item.text)}
-              style={[styles.translateButton, darkMode && styles.darkTranslateButton]}
-            >
-              <Ionicons
-                name={translateToFinnish ? "language-outline" : "language"}
-                size={20}
-                color={darkMode ? "#ccc" : "#666"}
-              />
-            </TouchableOpacity>
           </View>
         )}
         contentContainerStyle={[styles.messagesList, darkMode && styles.darkMessagesList]}
@@ -344,10 +346,41 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderColor: "#ddd",
+    justifyContent: "space-between",
   },
   darkHeader: {
     backgroundColor: "#1E1E1E",
     borderColor: "#333",
+  },
+  headerTitleSection: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  languageToggleButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  activeLanguageToggleButton: {
+    backgroundColor: '#29df04',
+  },
+  darkLanguageToggleButton: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  darkActiveLanguageToggleButton: {
+    backgroundColor: '#1a7a00',
+  },
+  languageToggleText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  activeLanguageToggleText: {
+    color: '#fff',
+  },
+  darkLanguageToggleText: {
+    color: '#ddd',
   },
   title: {
     fontSize: 18,

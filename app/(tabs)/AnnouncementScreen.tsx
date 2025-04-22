@@ -233,66 +233,71 @@ export default function AnnouncementScreen() {
         styles.announcementItem,
         darkMode && styles.darkAnnouncementItem
       ]}>
-        <View style={styles.chatroomBadge}>
-          <Ionicons name="people" size={12} color="white" style={styles.badgeIcon} />
-          <Text style={styles.chatroomText}>
-            {getChatroomName()}
-          </Text>
-        </View>
-        
-        {announcement.important && (
-          <View style={styles.importantBanner}>
-            <Ionicons name="warning" size={16} color="white" />
-            <Text style={styles.importantText}>Important</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.chatroomBadge}>
+            <Ionicons name="people" size={12} color="white" style={styles.badgeIcon} />
+            <Text style={styles.chatroomText}>
+              {getChatroomName()}
+            </Text>
           </View>
-        )}
-        
-        <View style={styles.announcementHeader}>
-          <Text style={[
-            styles.announcementTitle,
-            darkMode && styles.darkText
-          ]}>{announcement.title}</Text>
-          <Text style={[
-            styles.announcementDate,
-            darkMode && styles.darkSecondaryText
-          ]}>{announcement.formattedDate || new Date(announcement.dateCreated).toLocaleDateString()}</Text>
-        </View>
-        
-        <Text style={[
-          styles.announcementContent,
-          darkMode && styles.darkText
-        ]}>{announcement.content}</Text>
-        
-        <View style={styles.senderInfo}>
-          {announcement.sender?.profilePicture ? (
-            <Image 
-              source={{ uri: announcement.sender.profilePicture }} 
-              style={styles.senderAvatar} 
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>
-                {announcement.sender?.username?.charAt(0).toUpperCase() || "?"}
-              </Text>
+          
+          {announcement.important && (
+            <View style={styles.importantBanner}>
+              <Ionicons name="warning" size={14} color="white" />
+              <Text style={styles.importantText}>Important</Text>
             </View>
           )}
-          <Text style={[
-            styles.senderName,
-            darkMode && styles.darkSecondaryText
-          ]}>From: {announcement.sender?.username || "Unknown"}</Text>
         </View>
-        {isOwner && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => {
-              console.log('Delete button pressed for announcement:', announcement.id);
-              handleDeleteAnnouncement(announcement.id);
-            }}
-          >
-            <Ionicons name="trash" size={18} color="#FF3B30" />
-            <Text style={styles.deleteButtonText}>Delete</Text>
-          </TouchableOpacity>
-        )}
+        
+        <View style={styles.contentContainer}>
+          <View style={styles.announcementHeader}>
+            <Text style={[
+              styles.announcementTitle,
+              darkMode && styles.darkText
+            ]}>{announcement.title}</Text>
+            <Text style={[
+              styles.announcementDate,
+              darkMode && styles.darkSecondaryText
+            ]}>{announcement.formattedDate || new Date(announcement.dateCreated).toLocaleDateString()}</Text>
+          </View>
+          
+          <Text style={[
+            styles.announcementContent,
+            darkMode && styles.darkText
+          ]}>{announcement.content}</Text>
+          
+          <View style={styles.senderInfo}>
+            {announcement.sender?.profilePicture ? (
+              <Image 
+                source={{ uri: announcement.sender.profilePicture }} 
+                style={styles.senderAvatar} 
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>
+                  {announcement.sender?.username?.charAt(0).toUpperCase() || "?"}
+                </Text>
+              </View>
+            )}
+            <Text style={[
+              styles.senderName,
+              darkMode && styles.darkSecondaryText
+            ]}>From: {announcement.sender?.username || "Unknown"}</Text>
+            
+            {isOwner && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => {
+                  console.log('Delete button pressed for announcement:', announcement.id);
+                  handleDeleteAnnouncement(announcement.id);
+                }}
+              >
+                <Ionicons name="trash" size={16} color="#FF3B30" />
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </View>
     );
   };
@@ -307,7 +312,7 @@ export default function AnnouncementScreen() {
         darkMode && styles.darkText
       ]}>Announcements</Text>
       
-      <ScrollView style={styles.scrollContainer}>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.filterContainer}>
           <TouchableOpacity 
             style={[
@@ -387,6 +392,9 @@ export default function AnnouncementScreen() {
             <AnnouncementItem key={announcement.id} announcement={announcement} />
           ))
         )}
+        
+        {/* Add bottom padding to ensure last item is fully visible */}
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -395,8 +403,8 @@ export default function AnnouncementScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 15,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
   },
   darkContainer: {
     backgroundColor: '#121212',
@@ -404,14 +412,17 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 15,
-    marginBottom: 15,
+    marginTop: 16,
+    marginBottom: 20,
+    letterSpacing: -0.5,
+    color: '#1A1A1A',
+    marginLeft: 6,
   },
   darkText: {
     color: '#FFFFFF',
   },
   darkSecondaryText: {
-    color: '#AAAAAA',
+    color: '#B0B0B0',
   },
   scrollContainer: {
     flex: 1,
@@ -419,78 +430,96 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
-    paddingHorizontal: 5,
+    marginBottom: 20,
+    paddingHorizontal: 2,
   },
   filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
     backgroundColor: '#EEEEEE',
-    minWidth: 90,
+    minWidth: 100,
     alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   darkFilterButton: {
     backgroundColor: '#333333',
   },
   filterButtonActive: {
     backgroundColor: '#4A90E2',
+    elevation: 2,
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   filterButtonText: {
     color: '#666666',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 13,
   },
   darkFilterButtonText: {
     color: '#AAAAAA',
   },
   filterButtonTextActive: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 13,
   },
   announcementItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
+    marginLeft: 10,
+    marginRight: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
   },
   darkAnnouncementItem: {
     backgroundColor: '#1E1E1E',
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingHorizontal: 12,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingTop: 8,
+  },
   importantBanner: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
     backgroundColor: '#FF3B30',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderTopRightRadius: 12,
-    borderBottomLeftRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-end',
   },
   importantText: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: 4,
     fontSize: 12,
   },
   chatroomBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
     backgroundColor: '#4A90E2',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
     borderRadius: 12,
-    zIndex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   chatroomText: {
     color: 'white',
@@ -498,46 +527,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   badgeIcon: {
-    marginRight: 4,
+    marginRight: 5,
   },
   announcementHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
-    marginTop: 15,
-    marginLeft: 5,
+    marginBottom: 12,
+    marginTop: 14,
   },
   announcementTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     flex: 1,
+    color: '#1A1A1A',
+    lineHeight: 24,
   },
   announcementDate: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 13,
+    color: '#888888',
     marginLeft: 10,
+    marginTop: 2,
   },
   announcementContent: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
-    marginBottom: 15,
+    marginBottom: 16,
+    color: '#333333',
   },
   senderInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 12,
+    marginTop: 4,
   },
   senderAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     marginRight: 8,
   },
   avatarPlaceholder: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#4A90E2',
     justifyContent: 'center',
     alignItems: 'center',
@@ -546,86 +582,69 @@ const styles = StyleSheet.create({
   avatarInitial: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   senderName: {
     fontSize: 14,
     color: '#666666',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
-    paddingTop: 12,
-  },
-  darkBorder: {
-    borderTopColor: '#333333',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 20,
-  },
-  actionButtonText: {
-    marginLeft: 5,
-    color: '#4A90E2',
-  },
-  darkActionButtonText: {
-    color: '#82B1FF',
+    flex: 1,
   },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-end',
-    marginTop: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     backgroundColor: '#FFEAEA',
-    borderRadius: 8,
+    borderRadius: 16,
   },
   deleteButtonText: {
     color: '#FF3B30',
-    fontWeight: 'bold',
+    fontWeight: '600',
+    fontSize: 14,
     marginLeft: 5,
   },
   loadingContainer: {
-    padding: 20,
+    padding: 40,
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     color: '#666',
   },
   errorContainer: {
-    padding: 20,
+    padding: 40,
     alignItems: 'center',
   },
   errorText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     textAlign: 'center',
     color: '#666',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   retryButton: {
     backgroundColor: '#4A90E2',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
   },
   retryButtonText: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 15,
   },
   emptyContainer: {
     padding: 40,
     alignItems: 'center',
   },
   emptyText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     textAlign: 'center',
     color: '#666',
   },
+  bottomPadding: {
+    height: 24,
+  }
 });

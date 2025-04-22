@@ -6,6 +6,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { showToast } from "@/utils/showToast";
 
 interface Announcement {
   id: number;
@@ -63,7 +64,6 @@ export default function AnnouncementScreen() {
           token = await AsyncStorage.getItem('token');
         }
 
-        console.log('Token from AsyncStorage:', token ? 'Found' : 'Not found');
         setStoredToken(token);
       } catch (error) {
         console.error('Error retrieving token from AsyncStorage:', error);
@@ -94,15 +94,11 @@ export default function AnnouncementScreen() {
       const effectiveToken = getEffectiveToken();
       
       if (!effectiveToken) {
-        console.warn('No token available for API request');
         setError("You need to be logged in to view announcements");
         setLoading(false);
         return;
       }
   
-      console.log('Making API request with token:', effectiveToken.substring(0, 10) + '...');
-      
-      // Using the correct endpoint from Swagger docs with proper capitalization
       try {
         const response = await axios.get(`${API_BASE_URL}/api/ChatRoom`, {
           headers: {
@@ -111,36 +107,18 @@ export default function AnnouncementScreen() {
           }
         });
         
-        console.log('Chatrooms API response:', response.status);
-        
         if (Array.isArray(response.data)) {
-          console.log(`Received ${response.data.length} chatrooms`);
           setUserChatrooms(response.data);
         } else {
-          console.error('Unexpected response format:', response.data);
           setError("Invalid chatroom data format");
           setUserChatrooms([]);
         }
       } catch (error) {
-        console.error('Error fetching chatrooms:', error);
-        
-        if (axios.isAxiosError(error)) {
-          console.error('Axios error status:', error.response?.status);
-          console.error('Axios error data:', error.response?.data);
-        }
-        
         setError("Failed to load your chatrooms");
         setLoading(false);
         setUserChatrooms([]);
       }
     } catch (err) {
-      console.error("Failed to fetch user chatrooms:", err);
-      
-      if (axios.isAxiosError(err)) {
-        console.error('Axios error status:', err.response?.status);
-        console.error('Axios error data:', err.response?.data);
-      }
-      
       setError("Failed to load your chatrooms");
       setLoading(false);
       setUserChatrooms([]);
@@ -157,7 +135,6 @@ export default function AnnouncementScreen() {
       const effectiveToken = getEffectiveToken();
       
       if (!effectiveToken) {
-        console.warn('No token available for announcements API request');
         setError("You need to be logged in to view announcements");
         setLoading(false);
         return;
@@ -184,7 +161,7 @@ export default function AnnouncementScreen() {
           const chatroomAnnouncements = response.data;
           allAnnouncements = [...allAnnouncements, ...chatroomAnnouncements];
         } catch (chatroomErr) {
-          console.warn(`Failed to fetch announcements for chatroom ${chatroom.id}:`, chatroomErr);
+          // Ignore failed chatroom fetches
         }
       }
 
@@ -203,7 +180,6 @@ export default function AnnouncementScreen() {
       
       setAnnouncements(formattedAnnouncements);
     } catch (err) {
-      console.error("Failed to fetch announcements:", err);
       setError("Failed to load announcements. Please try again later.");
       setAnnouncements([]);
     } finally {
@@ -215,11 +191,42 @@ export default function AnnouncementScreen() {
     setCurrentFilter(filter);
   };
 
+  const handleDeleteAnnouncement = async (announcementId: number) => {
+    const effectiveToken = getEffectiveToken();
+    console.log('Attempting to delete announcement:', announcementId);
+    console.log('Effective token:', effectiveToken ? effectiveToken.substring(0, 20) + '...' : 'null');
+    if (!effectiveToken) {
+      showToast("error", "Not logged in", "You need to be logged in to delete announcements.");
+      return;
+    }
+    try {
+      await axios.delete(`${API_BASE_URL}/api/Announcement/${announcementId}`, {
+        headers: {
+          Authorization: `Bearer ${effectiveToken}`,
+        },
+      });
+      console.log('Delete successful for announcement:', announcementId);
+      setAnnouncements(prev => prev.filter(a => a.id !== announcementId));
+      showToast("success", "Announcement deleted", "The announcement was deleted successfully.");
+    } catch (err: any) {
+      if (err.response) {
+        console.log('Delete failed:', err.response.status, err.response.data);
+        showToast("error", "Delete failed", `Failed to delete announcement. (${err.response.status}: ${err.response.data})`);
+      } else {
+        console.log('Delete failed:', err.message);
+        showToast("error", "Delete failed", "Failed to delete announcement.");
+      }
+    }
+  };
+
   const AnnouncementItem = ({ announcement }: { announcement: Announcement }) => {
     const getChatroomName = () => {
       const chatroom = userChatrooms.find(room => room.id === announcement.chatroomId);
       return chatroom?.name || "Unknown Group";
     };
+
+    // Only show delete button if the current user is the sender
+    const isOwner = user && announcement.senderId === user.id;
 
     return (
       <View style={[
@@ -265,7 +272,7 @@ export default function AnnouncementScreen() {
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarInitial}>
-                {announcement.sender?.username.charAt(0).toUpperCase() || "?"}
+                {announcement.sender?.username?.charAt(0).toUpperCase() || "?"}
               </Text>
             </View>
           )}
@@ -274,6 +281,18 @@ export default function AnnouncementScreen() {
             darkMode && styles.darkSecondaryText
           ]}>From: {announcement.sender?.username || "Unknown"}</Text>
         </View>
+        {isOwner && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => {
+              console.log('Delete button pressed for announcement:', announcement.id);
+              handleDeleteAnnouncement(announcement.id);
+            }}
+          >
+            <Ionicons name="trash" size={18} color="#FF3B30" />
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -553,6 +572,21 @@ const styles = StyleSheet.create({
   },
   darkActionButtonText: {
     color: '#82B1FF',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: '#FFEAEA',
+    borderRadius: 8,
+  },
+  deleteButtonText: {
+    color: '#FF3B30',
+    fontWeight: 'bold',
+    marginLeft: 5,
   },
   loadingContainer: {
     padding: 20,

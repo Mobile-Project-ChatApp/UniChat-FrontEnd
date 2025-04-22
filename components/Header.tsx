@@ -21,9 +21,9 @@ export default function Header({
   const router = useRouter();
   const { user: authUser } = useContext(AuthContext);
 
-  const handleNotificationPress = () => {
-    router.push("/NotificationScreen");
-  };
+  // const handleNotificationPress = () => {
+  //   router.push("/NotificationScreen");
+  // };
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>
       <View style={styles.userInfo}>
@@ -39,13 +39,13 @@ export default function Header({
           Welcome, {username}
         </Text>
       </View>
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={[styles.iconButton, darkMode && styles.darkIconButton]}
         onPress={handleNotificationPress}
       >
         {hasUnreadNotifications && <View style={styles.notificationBadge} />}
         <MaterialIcons name="notifications" size={24} color="#4A90E2" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }

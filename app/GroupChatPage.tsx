@@ -42,6 +42,10 @@ export default function GroupChatPage() {
   const [title, setTitle] = useState(initialTitle || "");
   const [description, setDescription] = useState(initialDescription || "");
 
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [inviteInput, setInviteInput] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+
   useEffect(() => {
     fetchMembers();
   }, [roomId]);
@@ -103,6 +107,100 @@ export default function GroupChatPage() {
       router.back();
     } catch (err) {
       console.error("Error leaving room:", err);
+    }
+  };
+
+  const handleInvitePress = () => {
+    setInviteModalVisible(true);
+  };
+
+  const handleSendInvite = async () => {
+    if (!inviteInput.trim()) {
+      Alert.alert("Error", "Please enter a username or email to invite.");
+      return;
+    }
+    
+    setInviteLoading(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken") || 
+                    await AsyncStorage.getItem("authToken") || 
+                    await AsyncStorage.getItem("token");
+      
+      if (!token) {
+        Alert.alert("Authentication Error", "You need to be logged in.");
+        return;
+      }
+  
+      // First, search for the user to get their ID
+      const userSearchResponse = await axios.get(
+        `${API_BASE_URL}/api/users?search=${encodeURIComponent(inviteInput)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+  
+      // If no user found, show an error
+      if (!userSearchResponse.data || userSearchResponse.data.length === 0) {
+        Alert.alert("Error", "User not found. Please check the username.");
+        setInviteLoading(false);
+        return;
+      }
+  
+      // Get the user ID from the search results
+      const userId = userSearchResponse.data[0].id;
+      
+      // Now send the invitation with the numeric user ID
+      const response = await axios.post(
+        `${API_BASE_URL}/api/Invitation`,
+        {
+          ReceiverId: userId,  // Use numeric ID instead of username
+          ChatRoomId: parseInt(roomId)
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert("Success", "Invitation sent!");
+        setInviteModalVisible(false);
+        setInviteInput("");
+      }
+    } catch (error) {
+      console.error("Invitation error:", error);
+      
+      if (axios.isAxiosError(error) && error.response) {
+        if (axios.isAxiosError(error) && error.response) {
+          console.log("Error status:", error.response.status);
+        } else {
+          console.error("Unexpected error:", error);
+        }
+        if (axios.isAxiosError(error) && error.response) {
+          console.log("Error data:", error.response.data);
+        } else {
+          console.error("Unexpected error:", error);
+        }
+        
+        // Extract validation error messages if available
+        let errorMessage = "Failed to send invitation.";
+        if (error.response.data && error.response.data.errors) {
+          const errorDetails = Object.values(error.response.data.errors)
+            .flat()
+            .join("\n");
+          errorMessage = errorDetails || errorMessage;
+        }
+        
+        Alert.alert("Error", errorMessage);
+      } else {
+        Alert.alert("Error", "Failed to connect to the server.");
+      }
+    } finally {
+      setInviteLoading(false);
     }
   };
 
@@ -209,7 +307,7 @@ export default function GroupChatPage() {
         </View>
 
         <View style={styles.ButtonCon}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleInvitePress}>
             <Text style={styles.InviteBtn}>Invite People</Text>
           </TouchableOpacity>
 
@@ -267,6 +365,44 @@ export default function GroupChatPage() {
                 onPress={handleSaveEdit}
               >
                 <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Invite Modal */}
+      <Modal
+        visible={inviteModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setInviteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalView, darkMode && styles.darkModalView]}>
+            <Text style={[styles.modalTitle, darkMode && styles.darkText]}>
+              Invite User
+            </Text>
+            <TextInput
+              style={[styles.input, darkMode && styles.darkInput]}
+              value={inviteInput}
+              onChangeText={setInviteInput}
+              placeholder="Enter username or email"
+            />
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setInviteModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSendInvite}
+                disabled={inviteLoading}
+              >
+                <Text style={styles.buttonText}>
+                  {inviteLoading ? "Sending..." : "Send"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

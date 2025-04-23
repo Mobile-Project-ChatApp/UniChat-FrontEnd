@@ -2,6 +2,8 @@ import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { initializeSignalRConnection } from "@/utils/SignalRConnection";
+import { API_BASE_URL } from "@/config/apiConfig";
 
 interface ChatProps {
   title: string;
@@ -13,12 +15,44 @@ interface ChatProps {
 export default function Chat({ title, icon, darkMode, roomId }: ChatProps) {
   const router = useRouter();
 
-  const handlePress = () => {
-    console.log("Navigating to Chatroom with:", { title, icon });
-    router.push({
-      pathname: "/Chatroom/Chatroom",
-      params: { title, icon, roomId }, // Ensure roomId is passed here
-    });
+  const handlePress = async () => {
+    console.log("Joining Chatroom:", { title, icon, roomId });
+    
+    try {
+      // Initialize and connect to SignalR
+      const connection = await initializeSignalRConnection();
+      
+      if (connection) {
+        // Check if connection is already established
+        if (connection.state !== "Connected") {
+          await connection.start();
+        }
+        
+        // Join the room
+        await connection.invoke("JoinRoom", roomId);
+        console.log(`Successfully joined room ${roomId}`);
+        
+        // Navigate to the chatroom after successfully joining
+        router.push({
+          pathname: "/Chatroom/Chatroom",
+          params: { title, icon, roomId },
+        });
+      } else {
+        console.error("Failed to initialize SignalR connection");
+        // Still navigate, connection will be attempted again in the Chatroom component
+        router.push({
+          pathname: "/Chatroom/Chatroom",
+          params: { title, icon, roomId },
+        });
+      }
+    } catch (error) {
+      console.error("Error joining room:", error);
+      // Still navigate, connection will be attempted again in the Chatroom component
+      router.push({
+        pathname: "/Chatroom/Chatroom",
+        params: { title, icon, roomId },
+      });
+    }
   };
 
   return (

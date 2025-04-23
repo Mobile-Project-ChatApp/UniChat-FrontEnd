@@ -335,9 +335,41 @@ export default function Chatroom() {
     }
   };
 
+  const joinChatRoom = async () => {
+    try {
+      const connection = getSignalRConnection();
+      
+      if (!connection || !roomId) {
+        console.error("No connection or room ID available for joining");
+        return;
+      }
+      
+      // Check connection state and handle accordingly
+      if (connection.state === "Disconnected") {
+        console.log("Connection is disconnected. Reconnecting...");
+        await connection.start();
+      }
+      
+      if (connection.state === "Connected") {
+        // Join the room
+        await connection.invoke("JoinRoom", parseInt(roomId));
+        console.log(`Successfully joined room ${roomId}`);
+        
+        // Refetch chatroom info to get updated members list
+        await fetchChatroomInfo();
+      } else {
+        console.warn(`Connection is in ${connection.state} state, cannot join room now`);
+      }
+    } catch (error) {
+      console.error("Error joining chatroom:", error);
+    }
+  };
+
   useEffect(() => {
     fetchChatroomInfo();
-  }, []);
+    // Attempt to join the room when component mounts
+    joinChatRoom();
+  }, [roomId]);
 
   const EnterChatPage = () => {
     console.log("Navigating to Chatroom with:", { title, icon, description });

@@ -1,19 +1,61 @@
 import { ThemeContext } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { getSignalRConnection } from "../utils/SignalRConnection"
 
+import { API_BASE_URL } from '@/config/apiConfig';
+
+
 export default function GroupChatPage() {
   const router = useRouter();
-  const { roomId, icon, title, members, description }: any = useLocalSearchParams();
+  const { roomId, icon, title, description }: any = useLocalSearchParams();
   const { darkMode } = useContext(ThemeContext);
 
   const defaultAvatar = 'https://img.freepik.com/premium-vector/man-avatar-profile-picture-isolated-background-avatar-profile-picture-man_1293239-4867.jpg'; 
 
-  // Deserialize members
-  const parsedMembers = members ? JSON.parse(members) : [];
+
+
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // // Deserialize members
+  // const parsedMembers = members ? JSON.parse(members) : [];
+  useEffect(() => {
+    fetchMembers();
+  }, [roomId]);
+  
+  const fetchMembers = async () => {
+    if (!roomId) {
+      console.error("No room ID provided");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/chatroom/${roomId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch chatroom: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.members) {
+        console.log("GroupChatPage: Found members:", data.members);
+        setMembers(data.members);
+      } else {
+        console.warn("GroupChatPage: No members found or unexpected data format");
+        setMembers([]);
+      }
+    } catch (error) {
+      console.error("Error fetching chatroom members:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const HandleLeaveGroup = async () => {
     const connection = getSignalRConnection();
@@ -57,13 +99,13 @@ export default function GroupChatPage() {
 
         <Text style={styles.Memberstitle}>Members:</Text>
         <View style={styles.MembersCon}>
-          {parsedMembers.slice(0, 8).map((member: any, index: number) => (
+          {members.slice(0, 8).map((member: any, index: number) => (
             <View key={index} style={styles.MembersItem}>
               <Image source={{ uri: member.avatar || defaultAvatar }} style={styles.icon} />
               <Text>{member.username}</Text>
             </View>
           ))}
-          {parsedMembers.length > 8 && (
+          {members.length > 8 && (
             <View style={styles.MembersItem}>
               <Text style={{ fontSize: 24, fontWeight: "bold" }}>...</Text>
             </View>

@@ -14,7 +14,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import { fetchChatRooms, fetchOwnChatRooms } from "@/services/chatroomService"; // Add fetchOwnChatRooms
+import { fetchChatRooms, fetchOwnChatRooms } from "@/services/chatroomService";
 import GroupChat from "@/types/GroupChat";
 import Entypo from "@expo/vector-icons/Entypo";
 import CreateGroup from "@/components/CreateGroup";
@@ -27,9 +27,11 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const [groups, setGroups] = useState<GroupChat[]>([]);
+  const [allGroups, setAllGroups] = useState<GroupChat[]>([]); // Store all groups
+  const [searchText, setSearchText] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isCreateGroupVisible, setIsCreateGroupVisible] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<"all" | "own">("all"); // Track active filter
+  const [activeFilter, setActiveFilter] = useState<"all" | "own">("all");
 
   const DefaultGroupIcon =
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSg5K8ooFP05Qm9qt1hBvApo5z4FCGefVx5w&s";
@@ -37,7 +39,17 @@ export default function HomeScreen() {
   const loadChatRooms = async () => {
     try {
       const chatRooms = await fetchChatRooms(); // Fetch all chat rooms
-      setGroups(chatRooms);
+      setAllGroups(chatRooms); // Store all groups
+
+      // Apply search filter if needed
+      if (searchText.trim()) {
+        const filteredRooms = chatRooms.filter((room:any) =>
+          room.name.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setGroups(filteredRooms);
+      } else {
+        setGroups(chatRooms);
+      }
     } catch (error) {
       console.error("Failed to load chat rooms:", error);
     } finally {
@@ -50,15 +62,43 @@ export default function HomeScreen() {
       if (!user) {
         console.warn("No user logged in, skipping chat room fetch.");
         setGroups([]);
+        setAllGroups([]);
         return;
       }
-      const chatRooms = await fetchOwnChatRooms(); // Fetch user's chat rooms
-      setGroups(chatRooms);
+
+      const chatRooms = await fetchOwnChatRooms();
+      setAllGroups(chatRooms); // Store all user's chat rooms
+
+      // Apply search filter if needed
+      if (searchText.trim()) {
+        const filteredRooms = chatRooms.filter((room) =>
+          room.name.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setGroups(filteredRooms);
+      } else {
+        setGroups(chatRooms);
+      }
     } catch (error) {
       console.error("Failed to load own chat rooms:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle search text changes
+  const handleSearch = (text: string) => {
+    setSearchText(text);
+
+    if (!text.trim()) {
+      setGroups(allGroups);
+      return;
+    }
+
+    const filtered = allGroups.filter((group) =>
+      group.name.toLowerCase().includes(text.toLowerCase())
+    );
+
+    setGroups(filtered);
   };
 
   useEffect(() => {
@@ -67,17 +107,18 @@ export default function HomeScreen() {
     } else {
       loadOwnChatRooms();
     }
-  }, [user, activeFilter]); // Re-fetch when user or activeFilter changes
+  }, [user, activeFilter]); 
 
   const toggleAllChats = () => {
     setActiveFilter("all");
+    setSearchText(""); 
   };
 
   const toggleOwnChats = () => {
     setActiveFilter("own");
+    setSearchText(""); 
   };
 
-  // re-fetch chatrooms when returning to the HomeScreen after making changes
   useFocusEffect(
     useCallback(() => {
       if (activeFilter === "all") {
@@ -115,7 +156,11 @@ export default function HomeScreen() {
       <Text style={[styles.header, darkMode && styles.darkText]}>Chats</Text>
 
       <View style={styles.searchContainer}>
-        <SearchBar darkMode={darkMode} />
+        <SearchBar
+          darkMode={darkMode}
+          onSearch={handleSearch}
+          searchText={searchText}
+        />
       </View>
 
       <View style={styles.filterContainer}>
@@ -163,7 +208,9 @@ export default function HomeScreen() {
         <View style={styles.chatListContainer}>
           {groups.length === 0 ? (
             <Text style={[styles.noChatsText, darkMode && styles.darkText]}>
-              No chats found. Join or create a group!
+              {searchText.trim()
+                ? `No chats found matching "${searchText}"`
+                : "No chats found. Join or create a group!"}
             </Text>
           ) : (
             groups.map((group) => (
@@ -199,15 +246,20 @@ export default function HomeScreen() {
         onClose={() => setIsCreateGroupVisible(false)}
         onGroupCreated={(newGroup) => {
           console.log("New Group Created:", newGroup);
-          setGroups((prevGroups) => [
-            { ...newGroup, id: parseInt(newGroup.id) } as GroupChat,
-            ...prevGroups,
-          ]);
+
+          // Add new group to both state arrays
+          const newGroupObject = { ...newGroup, id: parseInt(newGroup.id) } as GroupChat;
+
+          setGroups((prevGroups) => [newGroupObject, ...prevGroups]);
+          setAllGroups((prevGroups) => [newGroupObject, ...prevGroups]);
+
+          // Refresh lists
           if (activeFilter === "all") {
             loadChatRooms();
           } else {
             loadOwnChatRooms();
           }
+
           setIsCreateGroupVisible(false);
         }}
       />

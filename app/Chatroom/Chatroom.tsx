@@ -498,6 +498,7 @@ export default function Chatroom() {
             <Text style={[styles.title, darkMode && styles.darkText]}>{title}</Text>
           </TouchableOpacity>
           
+          <View style={styles.Header_Right}>
           <TouchableOpacity
             onPress={toggleLanguage}
             style={[
@@ -525,6 +526,7 @@ export default function Chatroom() {
               <Ionicons name="notifications" size={24} color={darkMode ? "#fff" : "#000"} />
             </TouchableOpacity>
           )}
+          </View>
         </View>
       </SafeAreaView>
 
@@ -685,6 +687,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  Header_Right: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 15,
+
+  },
   languageToggleButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -821,8 +830,8 @@ const styles = StyleSheet.create({
   
   // Announcement styles
   announcementButton: {
-    marginLeft: 10,
-    padding: 10,
+    // marginLeft: 10,
+    // padding: 10,
   },
   announcementMessage: {
     backgroundColor: "#ffeb3b",

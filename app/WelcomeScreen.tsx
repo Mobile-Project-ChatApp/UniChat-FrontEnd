@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 
 export default function WelcomeScreen() {
@@ -8,6 +8,11 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to UniChat</Text>
+      <Image
+        source={require("../assets/images/Logo.png")}
+        style={styles.logo}
+      />
+
       <TouchableOpacity
         style={styles.button}
         onPress={() => router.push("/auth/login")}
@@ -27,10 +32,16 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fefefe",
     justifyContent: "center",
     alignItems: "center",
   },
+
+  logo: {
+    width: 300,
+    height: 300,
+  },
+
   title: {
     fontSize: 28,
     fontWeight: "bold",

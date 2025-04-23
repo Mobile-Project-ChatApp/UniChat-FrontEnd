@@ -12,12 +12,24 @@ import {
   Modal,
   TextInput,
   Alert,
+  ToastAndroid,
+  Platform,
 } from "react-native";
 import { getSignalRConnection } from "../utils/SignalRConnection";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import Toast from 'react-native-root-toast';
 import { API_BASE_URL } from "@/config/apiConfig";
+
+// Helper function for cross-platform toast messages
+const showToast = (message: string) => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show(message, ToastAndroid.SHORT);
+  } else {
+    // For iOS or web, use Alert since Toast is Android-only
+    Alert.alert("", message);
+  }
+};
 
 export default function GroupChatPage() {
   const router = useRouter();
@@ -49,6 +61,37 @@ export default function GroupChatPage() {
   useEffect(() => {
     fetchMembers();
   }, [roomId]);
+
+  const showToast = (message: string) => {
+    if (Platform.OS === 'web') {
+      // For web, create a custom visual toast since native ones don't work
+      const toastDiv = document.createElement('div');
+      toastDiv.style.position = 'fixed';
+      toastDiv.style.bottom = '20px';
+      toastDiv.style.left = '50%';
+      toastDiv.style.transform = 'translateX(-50%)';
+      toastDiv.style.backgroundColor = '#333';
+      toastDiv.style.color = 'white';
+      toastDiv.style.padding = '10px 20px';
+      toastDiv.style.borderRadius = '5px';
+      toastDiv.style.zIndex = '1000';
+      toastDiv.textContent = message;
+      
+      document.body.appendChild(toastDiv);
+      
+      setTimeout(() => {
+        document.body.removeChild(toastDiv);
+      }, 3000);
+    } else if (Platform.OS === 'android') {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      // For iOS or other platforms
+      Alert.alert("", message);
+    }
+    
+    // Also console log for debugging
+    console.log("TOAST:", message);
+  };
 
   const fetchMembers = async () => {
     if (!roomId) {
@@ -112,95 +155,142 @@ export default function GroupChatPage() {
 
   const handleInvitePress = () => {
     setInviteModalVisible(true);
+    setInviteInput("");
   };
 
   const handleSendInvite = async () => {
+    console.log("Starting invitation process for input:", inviteInput);
+    
     if (!inviteInput.trim()) {
-      Alert.alert("Error", "Please enter a username or email to invite.");
+      console.log("Empty input detected");
+      showToast("Please enter a username");
       return;
     }
     
     setInviteLoading(true);
     try {
+      console.log("Getting auth token...");
       const token = await AsyncStorage.getItem("accessToken") || 
-                    await AsyncStorage.getItem("authToken") || 
-                    await AsyncStorage.getItem("token");
+                   await AsyncStorage.getItem("authToken") || 
+                   await AsyncStorage.getItem("token");
       
       if (!token) {
-        Alert.alert("Authentication Error", "You need to be logged in.");
-        return;
-      }
-  
-      // First, search for the user to get their ID
-      const userSearchResponse = await axios.get(
-        `${API_BASE_URL}/api/users?search=${encodeURIComponent(inviteInput)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-  
-      // If no user found, show an error
-      if (!userSearchResponse.data || userSearchResponse.data.length === 0) {
-        Alert.alert("Error", "User not found. Please check the username.");
+        console.log("No auth token found");
+        showToast("You need to be logged in");
         setInviteLoading(false);
         return;
       }
+      console.log("Auth token retrieved successfully");
   
-      // Get the user ID from the search results
-      const userId = userSearchResponse.data[0].id;
-      
-      // Now send the invitation with the numeric user ID
-      const response = await axios.post(
-        `${API_BASE_URL}/api/Invitation`,
-        {
-          ReceiverId: userId,  // Use numeric ID instead of username
-          ChatRoomId: parseInt(roomId)
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+      // First find the user by exact username
+      try {
+        console.log(`Making API call to search for user: ${inviteInput}`);
+        console.log(`Request URL: ${API_BASE_URL}/api/users?search=${encodeURIComponent(inviteInput)}`);
+        
+        const usersResponse = await axios.get(
+          `${API_BASE_URL}/api/users?search=${encodeURIComponent(inviteInput)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        console.log("Users search API response status:", usersResponse.status);
+        console.log("Users found:", usersResponse.data.length);
+        console.log("Raw API response:", JSON.stringify(usersResponse.data));
+        
+        // Find the exact username match
+        const exactMatch = usersResponse.data.find(
+          (user: any) => user.username.toLowerCase() === inviteInput.toLowerCase()
+        );
+        
+        if (!exactMatch) {
+          console.log("No exact match found for username:", inviteInput);
+          console.log("Available usernames:", usersResponse.data.map((u: any) => u.username).join(', '));
+          showToast("User not found");
+          setInviteLoading(false);
+          return;
         }
-      );
-  
-      if (response.status === 200 || response.status === 201) {
-        Alert.alert("Success", "Invitation sent!");
-        setInviteModalVisible(false);
-        setInviteInput("");
+        
+        console.log("Exact match found:", JSON.stringify(exactMatch));
+        
+        // Check if user is already a member
+        console.log("Checking if user is already a member...");
+        console.log("Current members:", JSON.stringify(members.map(m => ({ id: m.id, username: m.username }))));
+        
+        const isMember = members.some(member => member.id === exactMatch.id);
+        if (isMember) {
+          console.log("User is already a member of this group");
+          showToast("User is already a member of this group");
+          setInviteLoading(false);
+          return;
+        }
+        
+        // Send invitation using the found user ID
+        try {
+          console.log("Sending invitation with payload:", {
+            ReceiverId: exactMatch.id,
+            ChatRoomId: parseInt(roomId)
+          });
+          
+          const response = await axios.post(
+            `${API_BASE_URL}/api/Invitation`,
+            {
+              ReceiverId: exactMatch.id,
+              ChatRoomId: parseInt(roomId)
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          
+          console.log("Invitation API response:", response.status, response.data);
+          showToast("Invitation sent successfully");
+          setInviteModalVisible(false);
+          setInviteInput("");
+        } catch (error: any) {
+          console.error("Invitation error:", error);
+          console.log("Error response data:", error.response?.data);
+          console.log("Error response status:", error.response?.status);
+          
+          if (error.response) {
+            if (error.response.status === 409) {
+              console.log("409 Conflict: Invitation already exists or user is already a member");
+              showToast("Invitation already exists or user is already a member");
+            } else if (error.response.status === 400) {
+              console.log("400 Bad Request:", error.response.data);
+              showToast(
+                typeof error.response.data === 'string' 
+                  ? error.response.data 
+                  : "Invalid invitation request"
+              );
+            } else {
+              console.log(`Error status ${error.response.status}`);
+              showToast("Failed to send invitation");
+            }
+          } else {
+            console.log("Network error or unhandled exception");
+            showToast("Network error");
+          }
+        }
+      } catch (searchError: any) {
+        console.error("Error in user search:", searchError);
+        console.log("Search error response data:", searchError.response?.data);
+        console.log("Search error response status:", searchError.response?.status);
+        showToast("Failed to find user");
       }
     } catch (error) {
-      console.error("Invitation error:", error);
-      
-      if (axios.isAxiosError(error) && error.response) {
-        if (axios.isAxiosError(error) && error.response) {
-          console.log("Error status:", error.response.status);
-        } else {
-          console.error("Unexpected error:", error);
-        }
-        if (axios.isAxiosError(error) && error.response) {
-          console.log("Error data:", error.response.data);
-        } else {
-          console.error("Unexpected error:", error);
-        }
-        
-        // Extract validation error messages if available
-        let errorMessage = "Failed to send invitation.";
-        if (error.response.data && error.response.data.errors) {
-          const errorDetails = Object.values(error.response.data.errors)
-            .flat()
-            .join("\n");
-          errorMessage = errorDetails || errorMessage;
-        }
-        
-        Alert.alert("Error", errorMessage);
-      } else {
-        Alert.alert("Error", "Failed to connect to the server.");
-      }
+      console.error("Top-level error in invitation process:", error);
+      showToast("Failed to find user");
     } finally {
+      console.log("Invitation process complete");
       setInviteLoading(false);
+      setInviteModalVisible(false);
+      setInviteInput("");
     }
   };
 
@@ -370,38 +460,56 @@ export default function GroupChatPage() {
           </View>
         </View>
       </Modal>
-      {/* Invite Modal */}
+
+      {/* Simplified Invite Modal */}
       <Modal
         visible={inviteModalVisible}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setInviteModalVisible(false)}
+        onRequestClose={() => {
+          setInviteModalVisible(false);
+          setInviteInput("");
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalView, darkMode && styles.darkModalView]}>
             <Text style={[styles.modalTitle, darkMode && styles.darkText]}>
               Invite User
             </Text>
+            
+            <Text style={[styles.modalLabel, darkMode && styles.darkText]}>
+              Enter username
+            </Text>
+            
             <TextInput
               style={[styles.input, darkMode && styles.darkInput]}
               value={inviteInput}
               onChangeText={setInviteInput}
-              placeholder="Enter username or email"
+              placeholder="Username"
+              autoCapitalize="none"
             />
+            
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => setInviteModalVisible(false)}
+                onPress={() => {
+                  setInviteModalVisible(false);
+                  setInviteInput("");
+                }}
               >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
+              
               <TouchableOpacity
-                style={styles.saveButton}
+                style={[
+                  styles.saveButton, 
+                  inviteLoading && styles.disabledButton
+                ]}
                 onPress={handleSendInvite}
                 disabled={inviteLoading}
               >
                 <Text style={styles.buttonText}>
-                  {inviteLoading ? "Sending..." : "Send"}
+                  {inviteLoading ? "Sending..." : "Send Invite"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -589,5 +697,9 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontWeight: "bold",
+  },
+  disabledButton: {
+    backgroundColor: "#cccccc",
+    opacity: 0.7,
   },
 });

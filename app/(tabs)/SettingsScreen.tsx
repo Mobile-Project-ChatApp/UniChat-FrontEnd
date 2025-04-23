@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +21,7 @@ import { User, SettingItemProps, AppNavigationProp } from "../../types/types";
 import { AuthContext } from "../../contexts/AuthContext";
 import { ThemeContext } from "../../contexts/ThemeContext";
 import { useRouter } from "expo-router";
+import axios from "axios";
 import { API_BASE_URL } from "@/config/apiConfig";
 
 export default function SettingsScreen() {
@@ -30,6 +32,12 @@ export default function SettingsScreen() {
   const [language, setLanguage] = useState("English");
   const [languageCode, setLanguageCode] = useState("en");
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+
+  // Invitations states
+  const [invitations, setInvitations] = useState<{ id: number; [key: string]: any }[]>([]);
+  const [showInvitationsModal, setShowInvitationsModal] = useState(false);
+  const [loadingInvitations, setLoadingInvitations] = useState(false);
+  const [processingInvitation, setProcessingInvitation] = useState(false);
 
   const { user: authUser, logout, deleteAccount } = useContext(AuthContext);
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
@@ -53,12 +61,116 @@ export default function SettingsScreen() {
     useCallback(() => {
       // Reset private profile toggle to off every time screen is focused
       setPrivateProfile(false);
+      // Fetch invitations when screen is focused
+      fetchInvitations();
     }, [])
   );
 
   useEffect(() => {
     console.log("Current authUser:", authUser);
   }, [authUser]);
+
+  const fetchInvitations = async () => {
+    setLoadingInvitations(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken") || 
+                    await AsyncStorage.getItem("authToken") || 
+                    await AsyncStorage.getItem("token");
+      
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_BASE_URL}/api/Invitation/byUserId`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        setInvitations(response.data);
+        console.log("Fetched invitations:", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      Alert.alert("Error", "Failed to load invitations. Please try again later.");
+    } finally {
+      setLoadingInvitations(false);
+    }
+  };
+
+  const acceptInvitation = async (invitationId: number) => {
+    setProcessingInvitation(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken") || 
+                    await AsyncStorage.getItem("authToken") || 
+                    await AsyncStorage.getItem("token");
+      
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/Invitation/accept/${invitationId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200 || response.status === 204) {
+        Alert.alert("Success", "Invitation accepted successfully!");
+        // Remove the accepted invitation from the list
+        setInvitations(invitations.filter(inv => inv.id !== invitationId));
+      }
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      Alert.alert("Error", "Failed to accept invitation. Please try again.");
+    } finally {
+      setProcessingInvitation(false);
+    }
+  };
+
+  const declineInvitation = async (invitationId: number) => {
+    setProcessingInvitation(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken") || 
+                    await AsyncStorage.getItem("authToken") || 
+                    await AsyncStorage.getItem("token");
+      
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      const response = await axios.delete(
+        `${API_BASE_URL}/api/Invitation/decline/${invitationId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200 || response.status === 204) {
+        Alert.alert("Success", "Invitation declined successfully.");
+        // Remove the declined invitation from the list
+        setInvitations(invitations.filter(inv => inv.id !== invitationId));
+      }
+    } catch (error) {
+      console.error("Error declining invitation:", error);
+      Alert.alert("Error", "Failed to decline invitation. Please try again.");
+    } finally {
+      setProcessingInvitation(false);
+    }
+  };
 
   const handleLogOut = async () => {
     try {
@@ -135,6 +247,11 @@ export default function SettingsScreen() {
     );
   };
 
+  const openInvitationsModal = () => {
+    fetchInvitations();
+    setShowInvitationsModal(true);
+  };
+
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.darkContainer]}>
       <Text style={[styles.header, darkMode && styles.darkText]}>Settings</Text>
@@ -189,6 +306,12 @@ export default function SettingsScreen() {
               }
             }}
             icon="lock-closed"
+            darkMode={darkMode}
+          />
+          <SettingItem
+            title="Check Invitations"
+            onPress={openInvitationsModal}
+            icon="mail"
             darkMode={darkMode}
           />
           <SettingItem
@@ -285,6 +408,98 @@ export default function SettingsScreen() {
                 ]}
               >
                 Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Invitations Modal */}
+      <Modal
+        visible={showInvitationsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInvitationsModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View
+            style={[styles.modalContent, darkMode && styles.darkModalContent]}
+          >
+            <Text
+              style={[styles.modalTitle, darkMode && styles.darkModalTitle]}
+            >
+              Invitations
+            </Text>
+
+            {loadingInvitations ? (
+              <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color="#4A90E2" />
+                <Text style={[styles.loadingText, darkMode && styles.darkText]}>
+                  Loading invitations...
+                </Text>
+              </View>
+            ) : invitations.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons 
+                  name="mail-outline" 
+                  size={50} 
+                  color={darkMode ? "#666" : "#ccc"} 
+                />
+                <Text style={[styles.emptyText, darkMode && styles.darkText]}>
+                  No invitations found
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={invitations}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <View
+                    style={[
+                      styles.invitationItem,
+                      darkMode && styles.darkInvitationItem,
+                    ]}
+                  >
+                    <View style={styles.invitationInfo}>
+                      <Text style={[styles.invitationTitle, darkMode && styles.darkText]}>
+                        {item.chatRoomName || "Chat Group"}
+                      </Text>
+                      <Text style={[styles.invitationSender, darkMode && styles.darkTextSecondary]}>
+                        From: {item.senderName || "Unknown"}
+                      </Text>
+                    </View>
+                    <View style={styles.invitationActions}>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.acceptButton]}
+                        onPress={() => acceptInvitation(item.id)}
+                        disabled={processingInvitation}
+                      >
+                        <Text style={styles.actionButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.declineButton]}
+                        onPress={() => declineInvitation(item.id)}
+                        disabled={processingInvitation}
+                      >
+                        <Text style={styles.actionButtonText}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+
+            <TouchableOpacity
+              style={[styles.closeButton, darkMode && styles.darkCloseButton]}
+              onPress={() => setShowInvitationsModal(false)}
+            >
+              <Text
+                style={[
+                  styles.closeButtonText,
+                  darkMode && styles.darkCloseButtonText,
+                ]}
+              >
+                Close
               </Text>
             </TouchableOpacity>
           </View>
@@ -551,5 +766,74 @@ const styles = StyleSheet.create({
   },
   darkCloseButtonText: {
     color: "#fff",
+  },
+  
+  // Invitation styles
+  invitationItem: {
+    backgroundColor: "#f8f8f8",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: "#4A90E2",
+  },
+  darkInvitationItem: {
+    backgroundColor: "#222",
+    borderLeftColor: "#82B1FF",
+  },
+  invitationInfo: {
+    marginBottom: 10,
+  },
+  invitationTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  invitationSender: {
+    fontSize: 14,
+    color: "#666",
+  },
+  invitationActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  actionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginLeft: 10,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  acceptButton: {
+    backgroundColor: "#4CAF50",
+  },
+  declineButton: {
+    backgroundColor: "#F44336",
+  },
+  actionButtonText: {
+    color: "white",
+    fontWeight: "500",
+  },
+  loaderContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
   },
 });

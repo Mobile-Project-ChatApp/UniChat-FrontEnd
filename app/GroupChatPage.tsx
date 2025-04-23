@@ -2,26 +2,39 @@ import { ThemeContext } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useState } from 'react';
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { getSignalRConnection } from "../utils/SignalRConnection"
+import { 
+  Image, 
+  SafeAreaView, 
+  StyleSheet, 
+  Text, 
+  TouchableOpacity, 
+  View,
+  Modal,
+  TextInput,
+  Alert
+} from 'react-native';
+import { getSignalRConnection } from "../utils/SignalRConnection";
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { API_BASE_URL } from '@/config/apiConfig';
 
 
 export default function GroupChatPage() {
   const router = useRouter();
-  const { roomId, icon, title, description }: any = useLocalSearchParams();
+  const { roomId, icon, title: initialTitle, description: initialDescription }: any = useLocalSearchParams();
   const { darkMode } = useContext(ThemeContext);
 
   const defaultAvatar = 'https://img.freepik.com/premium-vector/man-avatar-profile-picture-isolated-background-avatar-profile-picture-man_1293239-4867.jpg'; 
 
-
-
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editTitle, setEditTitle] = useState(initialTitle || "");
+  const [editDescription, setEditDescription] = useState(initialDescription || "");
+  const [title, setTitle] = useState(initialTitle || "");
+  const [description, setDescription] = useState(initialDescription || "");
 
-  // // Deserialize members
-  // const parsedMembers = members ? JSON.parse(members) : [];
   useEffect(() => {
     fetchMembers();
   }, [roomId]);
@@ -46,6 +59,16 @@ export default function GroupChatPage() {
       if (data && data.members) {
         console.log("GroupChatPage: Found members:", data.members);
         setMembers(data.members);
+        
+        // Update title and description from the API response if available
+        if (data.name) {
+          setTitle(data.name);
+          setEditTitle(data.name);
+        }
+        if (data.description) {
+          setDescription(data.description);
+          setEditDescription(data.description);
+        }
       } else {
         console.warn("GroupChatPage: No members found or unexpected data format");
         setMembers([]);
@@ -75,8 +98,61 @@ export default function GroupChatPage() {
   };
 
   const HandleEditPress = () => {
-    console.log("Edit pressed");
-  }
+    setIsModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTitle.trim()) {
+      Alert.alert("Error", "Group name cannot be empty");
+      return;
+    }
+    
+    try {
+      const token = await AsyncStorage.getItem('accessToken') || 
+                    await AsyncStorage.getItem('authToken') ||
+                    await AsyncStorage.getItem('token');
+      
+      if (!token) {
+        Alert.alert("Authentication Error", "You need to be logged in to edit group details");
+        return;
+      }
+      
+      const response = await axios.put(
+        `${API_BASE_URL}/api/Chatroom/${roomId}`,
+        {
+          id: parseInt(roomId),
+          name: editTitle,
+          description: editDescription
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.status === 200 || response.status === 204) {
+        // Update local state
+        setTitle(editTitle);
+        setDescription(editDescription);
+        setIsModalVisible(false);
+        
+        // Update params to refresh when going back
+        router.setParams({
+          title: editTitle,
+          description: editDescription
+        });
+        
+        Alert.alert("Success", "Group information updated successfully");
+      } else {
+        Alert.alert("Error", "Failed to update group information");
+      }
+    } catch (error) {
+      console.error("Error updating group information:", error);
+      Alert.alert("Error", "Failed to update group information");
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -131,6 +207,54 @@ export default function GroupChatPage() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+      
+      {/* Edit Modal */}
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalView, darkMode && styles.darkModalView]}>
+            <Text style={[styles.modalTitle, darkMode && styles.darkText]}>Edit Group</Text>
+            
+            <Text style={[styles.modalLabel, darkMode && styles.darkText]}>Group Name</Text>
+            <TextInput
+              style={[styles.input, darkMode && styles.darkInput]}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholder="Enter group name"
+            />
+            
+            <Text style={[styles.modalLabel, darkMode && styles.darkText]}>Description</Text>
+            <TextInput
+              style={[styles.textArea, darkMode && styles.darkInput]}
+              value={editDescription}
+              onChangeText={setEditDescription}
+              placeholder="Enter description"
+              multiline={true}
+              numberOfLines={3}
+            />
+            
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={() => setIsModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.saveButton} 
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -139,7 +263,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-
   },
   header: {
     flexDirection: 'row',
@@ -176,7 +299,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#595959',
   },
-
   MembersCon: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -192,10 +314,9 @@ const styles = StyleSheet.create({
     color: '#1c1c1c',
     marginBottom: 10,
   },
- 
   MembersItem: {
-    width: '22%', // 4 items per row with some spacing
-    aspectRatio: 1, // Make it square
+    width: '22%',
+    aspectRatio: 1,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
@@ -204,8 +325,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '500',
   },
-
-  ButtonCon : {
+  ButtonCon: {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
@@ -213,7 +333,6 @@ const styles = StyleSheet.create({
     rowGap: 10,
     marginTop: 10,
   },
-
   LeaveBtn: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -222,8 +341,8 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#ff0000',
     borderRadius: 10,
+    width: 200,
   },
-
   InviteBtn: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -232,7 +351,89 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#2dffbf',
     borderRadius: 10,
+    width: 200,
   },
-
   
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalView: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  darkModalView: {
+    backgroundColor: '#333',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  darkText: {
+    color: 'white',
+  },
+  modalLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  darkInput: {
+    borderColor: '#555',
+    color: 'white',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    backgroundColor: '#f44336',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    flex: 1,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
 });

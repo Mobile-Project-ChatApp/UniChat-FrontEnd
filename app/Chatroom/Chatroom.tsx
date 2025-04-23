@@ -233,7 +233,6 @@ export default function Chatroom() {
 
         if (!accessToken) {
           console.error("No access token found. Please login again.");
-          // You might want to redirect to login here
           return;
         }
 
@@ -242,20 +241,88 @@ export default function Chatroom() {
           accessToken.substring(0, 10) + "..."
         );
 
+        // Initialize connection (or get existing one)
         const connection = await initializeSignalRConnection();
 
-        // Rest of your existing connection setup...
+        if (!connection) {
+          console.error("Failed to initialize SignalR connection");
+          return;
+        }
+
+        // Remove any existing handlers to prevent duplicates
+        connection.off("ReceiveMessage");
+        connection.off("UserJoined");
+        connection.off("UserLeft");
+
+        // Listen for new messages from the server
+        connection.on("ReceiveMessage", (message) => {
+          console.log("Received new message:", message);
+          console.log("Current user ID:", currentUserId);
+
+          // Don't add your own messages twice (they're already added optimistically)
+          if (message.senderId !== currentUserId) {
+            console.log("Adding message from other user:", message.sender?.username);
+
+            const formattedMessage = {
+              id: message.id.toString(),
+              text: message.messageText,
+              time: new Date(message.sentAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+              }),
+              senderId: message.senderId,
+              senderUsername: message.sender?.username || "Unknown"
+            };
+
+            // Add the new message to the list
+            setMessages(prevMessages => [formattedMessage, ...prevMessages]);
+          }
+        });
+
+        // Listen for user join/leave events
+        connection.on("UserJoined", (user) => {
+          console.log("User joined:", user);
+          // Update members list
+          fetchChatroomInfo();
+        });
+
+        connection.on("UserLeft", (username) => {
+          console.log("User left:", username);
+          // Update members list
+          fetchChatroomInfo();
+        });
+
+        // Make sure we're connected to the room
+        if (connection.state === "Connected" && roomId) {
+          try {
+            await connection.invoke("JoinRoom", parseInt(roomId));
+            console.log(`Successfully joined room ${roomId}`);
+          } catch (joinErr) {
+            console.error("Error joining room:", joinErr);
+          }
+        }
+
       } catch (error) {
         console.error("SignalR connection setup failed:", error);
       }
     };
 
-    setupConnection();
+    if (currentUserId !== null && roomId) {
+      console.log("Setting up connection with user ID:", currentUserId);
+      setupConnection();
+    }
 
     return () => {
-      stopSignalRConnection();
+      const connection = getSignalRConnection();
+      if (connection) {
+        // Remove all event listeners when component unmounts
+        connection.off("ReceiveMessage");
+        connection.off("UserJoined");
+        connection.off("UserLeft");
+      }
     };
-  }, [roomId]);
+  }, [currentUserId, roomId]); // This effect depends on currentUserId being set
 
   // Force userId for dev mode testing
   useEffect(() => {

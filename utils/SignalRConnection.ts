@@ -93,8 +93,33 @@ export const getSignalRConnection = (): signalR.HubConnection | null => {
 
 export const stopSignalRConnection = async (): Promise<void> => {
   if (connection) {
-    await connection.stop();
-    console.log("SignalR connection stopped.");
-    connection = null;
+    try {
+      // Remove all listeners
+      connection.off("ReceiveMessage");
+      connection.off("UserJoined");
+      connection.off("UserLeft");
+      
+      // Stop the connection
+      await connection.stop();
+      console.log("SignalR connection stopped.");
+      connection = null;
+    } catch (error) {
+      console.error("Error stopping SignalR connection:", error);
+      connection = null;
+    }
   }
+};
+
+export const ensureConnected = async (): Promise<signalR.HubConnection> => {
+  let conn = getSignalRConnection();
+  
+  if (!conn) {
+    conn = await initializeSignalRConnection();
+  }
+  
+  if (conn.state !== "Connected") {
+    await conn.start();
+  }
+  
+  return conn;
 };

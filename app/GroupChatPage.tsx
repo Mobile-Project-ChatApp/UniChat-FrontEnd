@@ -212,9 +212,7 @@ export default function GroupChatPage() {
           <TouchableOpacity>
             <Text style={styles.InviteBtn}>Invite People</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.InviteBtn}>Share Group</Text>
-          </TouchableOpacity>
+
           <TouchableOpacity onPress={HandleLeaveGroup}>
             <Text style={styles.LeaveBtn}>Leave Group</Text>
           </TouchableOpacity>

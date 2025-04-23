@@ -6,6 +6,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { showToast } from "@/utils/showToast";
 
 interface Announcement {
   id: number;
@@ -63,7 +64,6 @@ export default function AnnouncementScreen() {
           token = await AsyncStorage.getItem('token');
         }
 
-        console.log('Token from AsyncStorage:', token ? 'Found' : 'Not found');
         setStoredToken(token);
       } catch (error) {
         console.error('Error retrieving token from AsyncStorage:', error);
@@ -94,15 +94,11 @@ export default function AnnouncementScreen() {
       const effectiveToken = getEffectiveToken();
       
       if (!effectiveToken) {
-        console.warn('No token available for API request');
         setError("You need to be logged in to view announcements");
         setLoading(false);
         return;
       }
   
-      console.log('Making API request with token:', effectiveToken.substring(0, 10) + '...');
-      
-      // Using the correct endpoint from Swagger docs with proper capitalization
       try {
         const response = await axios.get(`${API_BASE_URL}/api/ChatRoom`, {
           headers: {
@@ -111,36 +107,18 @@ export default function AnnouncementScreen() {
           }
         });
         
-        console.log('Chatrooms API response:', response.status);
-        
         if (Array.isArray(response.data)) {
-          console.log(`Received ${response.data.length} chatrooms`);
           setUserChatrooms(response.data);
         } else {
-          console.error('Unexpected response format:', response.data);
           setError("Invalid chatroom data format");
           setUserChatrooms([]);
         }
       } catch (error) {
-        console.error('Error fetching chatrooms:', error);
-        
-        if (axios.isAxiosError(error)) {
-          console.error('Axios error status:', error.response?.status);
-          console.error('Axios error data:', error.response?.data);
-        }
-        
         setError("Failed to load your chatrooms");
         setLoading(false);
         setUserChatrooms([]);
       }
     } catch (err) {
-      console.error("Failed to fetch user chatrooms:", err);
-      
-      if (axios.isAxiosError(err)) {
-        console.error('Axios error status:', err.response?.status);
-        console.error('Axios error data:', err.response?.data);
-      }
-      
       setError("Failed to load your chatrooms");
       setLoading(false);
       setUserChatrooms([]);
@@ -157,7 +135,6 @@ export default function AnnouncementScreen() {
       const effectiveToken = getEffectiveToken();
       
       if (!effectiveToken) {
-        console.warn('No token available for announcements API request');
         setError("You need to be logged in to view announcements");
         setLoading(false);
         return;
@@ -184,7 +161,7 @@ export default function AnnouncementScreen() {
           const chatroomAnnouncements = response.data;
           allAnnouncements = [...allAnnouncements, ...chatroomAnnouncements];
         } catch (chatroomErr) {
-          console.warn(`Failed to fetch announcements for chatroom ${chatroom.id}:`, chatroomErr);
+          // Ignore failed chatroom fetches
         }
       }
 
@@ -203,7 +180,6 @@ export default function AnnouncementScreen() {
       
       setAnnouncements(formattedAnnouncements);
     } catch (err) {
-      console.error("Failed to fetch announcements:", err);
       setError("Failed to load announcements. Please try again later.");
       setAnnouncements([]);
     } finally {
@@ -215,64 +191,112 @@ export default function AnnouncementScreen() {
     setCurrentFilter(filter);
   };
 
+  const handleDeleteAnnouncement = async (announcementId: number) => {
+    const effectiveToken = getEffectiveToken();
+    console.log('Attempting to delete announcement:', announcementId);
+    console.log('Effective token:', effectiveToken ? effectiveToken.substring(0, 20) + '...' : 'null');
+    if (!effectiveToken) {
+      showToast("error", "Not logged in", "You need to be logged in to delete announcements.");
+      return;
+    }
+    try {
+      await axios.delete(`${API_BASE_URL}/api/Announcement/${announcementId}`, {
+        headers: {
+          Authorization: `Bearer ${effectiveToken}`,
+        },
+      });
+      console.log('Delete successful for announcement:', announcementId);
+      setAnnouncements(prev => prev.filter(a => a.id !== announcementId));
+      showToast("success", "Announcement deleted", "The announcement was deleted successfully.");
+    } catch (err: any) {
+      if (err.response) {
+        console.log('Delete failed:', err.response.status, err.response.data);
+        showToast("error", "Delete failed", `Failed to delete announcement. (${err.response.status}: ${err.response.data})`);
+      } else {
+        console.log('Delete failed:', err.message);
+        showToast("error", "Delete failed", "Failed to delete announcement.");
+      }
+    }
+  };
+
   const AnnouncementItem = ({ announcement }: { announcement: Announcement }) => {
     const getChatroomName = () => {
       const chatroom = userChatrooms.find(room => room.id === announcement.chatroomId);
       return chatroom?.name || "Unknown Group";
     };
 
+    // Only show delete button if the current user is the sender
+    const isOwner = user && announcement.senderId === user.id;
+
     return (
       <View style={[
         styles.announcementItem,
         darkMode && styles.darkAnnouncementItem
       ]}>
-        <View style={styles.chatroomBadge}>
-          <Ionicons name="people" size={12} color="white" style={styles.badgeIcon} />
-          <Text style={styles.chatroomText}>
-            {getChatroomName()}
-          </Text>
-        </View>
-        
-        {announcement.important && (
-          <View style={styles.importantBanner}>
-            <Ionicons name="warning" size={16} color="white" />
-            <Text style={styles.importantText}>Important</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.chatroomBadge}>
+            <Ionicons name="people" size={12} color="white" style={styles.badgeIcon} />
+            <Text style={styles.chatroomText}>
+              {getChatroomName()}
+            </Text>
           </View>
-        )}
-        
-        <View style={styles.announcementHeader}>
-          <Text style={[
-            styles.announcementTitle,
-            darkMode && styles.darkText
-          ]}>{announcement.title}</Text>
-          <Text style={[
-            styles.announcementDate,
-            darkMode && styles.darkSecondaryText
-          ]}>{announcement.formattedDate || new Date(announcement.dateCreated).toLocaleDateString()}</Text>
-        </View>
-        
-        <Text style={[
-          styles.announcementContent,
-          darkMode && styles.darkText
-        ]}>{announcement.content}</Text>
-        
-        <View style={styles.senderInfo}>
-          {announcement.sender?.profilePicture ? (
-            <Image 
-              source={{ uri: announcement.sender.profilePicture }} 
-              style={styles.senderAvatar} 
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>
-                {announcement.sender?.username.charAt(0).toUpperCase() || "?"}
-              </Text>
+          
+          {announcement.important && (
+            <View style={styles.importantBanner}>
+              <Ionicons name="warning" size={14} color="white" />
+              <Text style={styles.importantText}>Important</Text>
             </View>
           )}
+        </View>
+        
+        <View style={styles.contentContainer}>
+          <View style={styles.announcementHeader}>
+            <Text style={[
+              styles.announcementTitle,
+              darkMode && styles.darkText
+            ]}>{announcement.title}</Text>
+            <Text style={[
+              styles.announcementDate,
+              darkMode && styles.darkSecondaryText
+            ]}>{announcement.formattedDate || new Date(announcement.dateCreated).toLocaleDateString()}</Text>
+          </View>
+          
           <Text style={[
-            styles.senderName,
-            darkMode && styles.darkSecondaryText
-          ]}>From: {announcement.sender?.username || "Unknown"}</Text>
+            styles.announcementContent,
+            darkMode && styles.darkText
+          ]}>{announcement.content}</Text>
+          
+          <View style={styles.senderInfo}>
+            {announcement.sender?.profilePicture ? (
+              <Image 
+                source={{ uri: announcement.sender.profilePicture }} 
+                style={styles.senderAvatar} 
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>
+                  {announcement.sender?.username?.charAt(0).toUpperCase() || "?"}
+                </Text>
+              </View>
+            )}
+            <Text style={[
+              styles.senderName,
+              darkMode && styles.darkSecondaryText
+            ]}>From: {announcement.sender?.username || "Unknown"}</Text>
+            
+            {isOwner && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => {
+                  console.log('Delete button pressed for announcement:', announcement.id);
+                  handleDeleteAnnouncement(announcement.id);
+                }}
+              >
+                <Ionicons name="trash" size={16} color="#FF3B30" />
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -288,7 +312,7 @@ export default function AnnouncementScreen() {
         darkMode && styles.darkText
       ]}>Announcements</Text>
       
-      <ScrollView style={styles.scrollContainer}>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.filterContainer}>
           <TouchableOpacity 
             style={[
@@ -368,6 +392,9 @@ export default function AnnouncementScreen() {
             <AnnouncementItem key={announcement.id} announcement={announcement} />
           ))
         )}
+        
+        {/* Add bottom padding to ensure last item is fully visible */}
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -376,8 +403,8 @@ export default function AnnouncementScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 15,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
   },
   darkContainer: {
     backgroundColor: '#121212',
@@ -385,14 +412,17 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 15,
-    marginBottom: 15,
+    marginTop: 16,
+    marginBottom: 20,
+    letterSpacing: -0.5,
+    color: '#1A1A1A',
+    marginLeft: 6,
   },
   darkText: {
     color: '#FFFFFF',
   },
   darkSecondaryText: {
-    color: '#AAAAAA',
+    color: '#B0B0B0',
   },
   scrollContainer: {
     flex: 1,
@@ -400,78 +430,96 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
-    paddingHorizontal: 5,
+    marginBottom: 20,
+    paddingHorizontal: 2,
   },
   filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
     backgroundColor: '#EEEEEE',
-    minWidth: 90,
+    minWidth: 100,
     alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   darkFilterButton: {
     backgroundColor: '#333333',
   },
   filterButtonActive: {
     backgroundColor: '#4A90E2',
+    elevation: 2,
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   filterButtonText: {
     color: '#666666',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 13,
   },
   darkFilterButtonText: {
     color: '#AAAAAA',
   },
   filterButtonTextActive: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 13,
   },
   announcementItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
+    marginLeft: 10,
+    marginRight: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
   },
   darkAnnouncementItem: {
     backgroundColor: '#1E1E1E',
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingHorizontal: 12,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingTop: 8,
+  },
   importantBanner: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
     backgroundColor: '#FF3B30',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderTopRightRadius: 12,
-    borderBottomLeftRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-end',
   },
   importantText: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: 4,
     fontSize: 12,
   },
   chatroomBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
     backgroundColor: '#4A90E2',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
     borderRadius: 12,
-    zIndex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   chatroomText: {
     color: 'white',
@@ -479,46 +527,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   badgeIcon: {
-    marginRight: 4,
+    marginRight: 5,
   },
   announcementHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
-    marginTop: 15,
-    marginLeft: 5,
+    marginBottom: 12,
+    marginTop: 14,
   },
   announcementTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     flex: 1,
+    color: '#1A1A1A',
+    lineHeight: 24,
   },
   announcementDate: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 13,
+    color: '#888888',
     marginLeft: 10,
+    marginTop: 2,
   },
   announcementContent: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
-    marginBottom: 15,
+    marginBottom: 16,
+    color: '#333333',
   },
   senderInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 12,
+    marginTop: 4,
   },
   senderAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     marginRight: 8,
   },
   avatarPlaceholder: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#4A90E2',
     justifyContent: 'center',
     alignItems: 'center',
@@ -527,71 +582,69 @@ const styles = StyleSheet.create({
   avatarInitial: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   senderName: {
     fontSize: 14,
     color: '#666666',
+    flex: 1,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
-    paddingTop: 12,
-  },
-  darkBorder: {
-    borderTopColor: '#333333',
-  },
-  actionButton: {
+  deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFEAEA',
+    borderRadius: 16,
   },
-  actionButtonText: {
+  deleteButtonText: {
+    color: '#FF3B30',
+    fontWeight: '600',
+    fontSize: 14,
     marginLeft: 5,
-    color: '#4A90E2',
-  },
-  darkActionButtonText: {
-    color: '#82B1FF',
   },
   loadingContainer: {
-    padding: 20,
+    padding: 40,
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     color: '#666',
   },
   errorContainer: {
-    padding: 20,
+    padding: 40,
     alignItems: 'center',
   },
   errorText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     textAlign: 'center',
     color: '#666',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   retryButton: {
     backgroundColor: '#4A90E2',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
   },
   retryButtonText: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 15,
   },
   emptyContainer: {
     padding: 40,
     alignItems: 'center',
   },
   emptyText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     textAlign: 'center',
     color: '#666',
   },
+  bottomPadding: {
+    height: 24,
+  }
 });

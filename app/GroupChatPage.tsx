@@ -419,13 +419,24 @@ export default function GroupChatPage() {
                 </View>
               ))}
               {hasMoreMembers && (
-                <TouchableOpacity style={styles.seeMoreButton}>
-                  <View style={styles.memberItem}>
-                    <View style={styles.moreAvatarPlaceholder}>
-                      <Text style={styles.moreAvatarText}>+{members.length - visibleMembersCount}</Text>
-                    </View>
-                    <Text style={[styles.memberUsername, darkMode && styles.darkText]}>See More</Text>
+                <TouchableOpacity 
+                  style={styles.seeMoreButton}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.moreAvatarPlaceholder, darkMode && { backgroundColor: "#444", borderColor: "#555" }]}>
+                    <Text style={[styles.moreAvatarText, darkMode && { color: "#fff" }]}>
+                      +{members.length - visibleMembersCount}
+                    </Text>
                   </View>
+                  <Text 
+                    style={[
+                      styles.memberUsername, 
+                      darkMode && styles.darkText,
+                      { fontWeight: "600", color: darkMode ? "#4da6ff" : "#007bff" }
+                    ]}
+                  >
+                    See More
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -708,23 +719,37 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "500",
     width: "100%",
+    marginTop: 4,
   },
   moreAvatarPlaceholder: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
+    borderWidth: 2,
+    borderColor: "#ddd",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
   },
   moreAvatarText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#666",
+    color: "#555",
   },
   seeMoreButton: {
-    opacity: 0.8,
+    width: "25%",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginTop: 8,
+    marginBottom: 8,
+    opacity: 1,
   },
   buttonContainer: {
     padding: 16,

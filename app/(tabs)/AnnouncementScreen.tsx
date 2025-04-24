@@ -579,6 +579,8 @@ const styles = StyleSheet.create({
   announcementItem: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
     marginBottom: 16,
     marginLeft: 10,
     marginRight: 10,

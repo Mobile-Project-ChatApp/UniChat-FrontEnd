@@ -14,21 +14,43 @@ import {
   Alert,
   ToastAndroid,
   Platform,
+  ScrollView,
 } from "react-native";
 import { getSignalRConnection } from "../utils/SignalRConnection";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Toast from 'react-native-root-toast';
 import { API_BASE_URL } from "@/config/apiConfig";
 
 // Helper function for cross-platform toast messages
 const showToast = (message: string) => {
-  if (Platform.OS === 'android') {
+  if (Platform.OS === 'web') {
+    // For web, create a custom visual toast since native ones don't work
+    const toastDiv = document.createElement('div');
+    toastDiv.style.position = 'fixed';
+    toastDiv.style.bottom = '20px';
+    toastDiv.style.left = '50%';
+    toastDiv.style.transform = 'translateX(-50%)';
+    toastDiv.style.backgroundColor = '#333';
+    toastDiv.style.color = 'white';
+    toastDiv.style.padding = '10px 20px';
+    toastDiv.style.borderRadius = '5px';
+    toastDiv.style.zIndex = '1000';
+    toastDiv.textContent = message;
+    
+    document.body.appendChild(toastDiv);
+    
+    setTimeout(() => {
+      document.body.removeChild(toastDiv);
+    }, 3000);
+  } else if (Platform.OS === 'android') {
     ToastAndroid.show(message, ToastAndroid.SHORT);
   } else {
-    // For iOS or web, use Alert since Toast is Android-only
+    // For iOS or other platforms
     Alert.alert("", message);
   }
+  
+  // Also console log for debugging
+  console.log("TOAST:", message);
 };
 
 export default function GroupChatPage() {
@@ -61,37 +83,6 @@ export default function GroupChatPage() {
   useEffect(() => {
     fetchMembers();
   }, [roomId]);
-
-  const showToast = (message: string) => {
-    if (Platform.OS === 'web') {
-      // For web, create a custom visual toast since native ones don't work
-      const toastDiv = document.createElement('div');
-      toastDiv.style.position = 'fixed';
-      toastDiv.style.bottom = '20px';
-      toastDiv.style.left = '50%';
-      toastDiv.style.transform = 'translateX(-50%)';
-      toastDiv.style.backgroundColor = '#333';
-      toastDiv.style.color = 'white';
-      toastDiv.style.padding = '10px 20px';
-      toastDiv.style.borderRadius = '5px';
-      toastDiv.style.zIndex = '1000';
-      toastDiv.textContent = message;
-      
-      document.body.appendChild(toastDiv);
-      
-      setTimeout(() => {
-        document.body.removeChild(toastDiv);
-      }, 3000);
-    } else if (Platform.OS === 'android') {
-      ToastAndroid.show(message, ToastAndroid.SHORT);
-    } else {
-      // For iOS or other platforms
-      Alert.alert("", message);
-    }
-    
-    // Also console log for debugging
-    console.log("TOAST:", message);
-  };
 
   const fetchMembers = async () => {
     if (!roomId) {
@@ -198,7 +189,6 @@ export default function GroupChatPage() {
         
         console.log("Users search API response status:", usersResponse.status);
         console.log("Users found:", usersResponse.data.length);
-        console.log("Raw API response:", JSON.stringify(usersResponse.data));
         
         // Find the exact username match
         const exactMatch = usersResponse.data.find(
@@ -207,17 +197,13 @@ export default function GroupChatPage() {
         
         if (!exactMatch) {
           console.log("No exact match found for username:", inviteInput);
-          console.log("Available usernames:", usersResponse.data.map((u: any) => u.username).join(', '));
           showToast("User not found");
           setInviteLoading(false);
           return;
         }
         
-        console.log("Exact match found:", JSON.stringify(exactMatch));
-        
         // Check if user is already a member
         console.log("Checking if user is already a member...");
-        console.log("Current members:", JSON.stringify(members.map(m => ({ id: m.id, username: m.username }))));
         
         const isMember = members.some(member => member.id === exactMatch.id);
         if (isMember) {
@@ -254,8 +240,6 @@ export default function GroupChatPage() {
           setInviteInput("");
         } catch (error: any) {
           console.error("Invitation error:", error);
-          console.log("Error response data:", error.response?.data);
-          console.log("Error response status:", error.response?.status);
           
           if (error.response) {
             if (error.response.status === 409) {
@@ -279,8 +263,6 @@ export default function GroupChatPage() {
         }
       } catch (searchError: any) {
         console.error("Error in user search:", searchError);
-        console.log("Search error response data:", searchError.response?.data);
-        console.log("Search error response status:", searchError.response?.status);
         showToast("Failed to find user");
       }
     } catch (error) {
@@ -289,8 +271,6 @@ export default function GroupChatPage() {
     } finally {
       console.log("Invitation process complete");
       setInviteLoading(false);
-      setInviteModalVisible(false);
-      setInviteInput("");
     }
   };
 
@@ -355,56 +335,79 @@ export default function GroupChatPage() {
     }
   };
 
+  // Calculate how many members to show before adding "See All" button
+  const visibleMembersCount = 8;
+  const hasMoreMembers = members.length > visibleMembersCount;
+
   return (
-    <View style={styles.container}>
-      <SafeAreaView>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={24} color="black" />
-          </TouchableOpacity>
-          <Text style={{ fontWeight: "bold" }}>Group Info</Text>
-          <TouchableOpacity onPress={HandleEditPress}>
-            <Text style={styles.edit}>Edit</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={[styles.container, darkMode && styles.darkContainer]}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={[styles.header, darkMode && styles.darkHeader]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color={darkMode ? "white" : "black"} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, darkMode && styles.darkText]}>Group Info</Text>
+            <TouchableOpacity onPress={HandleEditPress} style={styles.editButton}>
+              <Text style={[styles.edit, darkMode && styles.darkEdit]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.Infoheader}>
-          <Image source={{ uri: icon }} style={styles.icon} />
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
-        </View>
+          <View style={[styles.infoHeader, darkMode && styles.darkInfoHeader]}>
+            <Image source={{ uri: icon }} style={styles.groupIcon} />
+            <Text style={[styles.title, darkMode && styles.darkTitle]}>{title}</Text>
+            <Text style={[styles.description, darkMode && styles.darkDescription]}>{description}</Text>
+          </View>
 
-        <Text style={styles.Memberstitle}>Members:</Text>
-        <View style={styles.MembersCon}>
-          {members.slice(0, 8).map((member: any, index: number) => (
-            <View key={index} style={styles.MembersItem}>
-              <Image
-                source={{
-                  uri: member.profilePicture
-                    ? `${API_BASE_URL}${member.profilePicture}`
-                    : defaultAvatar,
-                }}
-                style={styles.icon}
-              />
-              <Text>{member.username}</Text>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.membersTitle, darkMode && styles.darkText]}>Members:</Text>
+            <View style={[styles.membersGrid, darkMode && styles.darkMembersGrid]}>
+              {members.slice(0, visibleMembersCount).map((member: any, index: number) => (
+                <View key={index} style={styles.memberItem}>
+                  <Image
+                    source={{
+                      uri: member.profilePicture
+                        ? `${API_BASE_URL}${member.profilePicture}`
+                        : defaultAvatar,
+                    }}
+                    style={styles.memberAvatar}
+                  />
+                  <Text style={[styles.memberUsername, darkMode && styles.darkText]} numberOfLines={1}>
+                    {member.username}
+                  </Text>
+                </View>
+              ))}
+              {hasMoreMembers && (
+                <TouchableOpacity style={styles.seeMoreButton}>
+                  <View style={styles.memberItem}>
+                    <View style={styles.moreAvatarPlaceholder}>
+                      <Text style={styles.moreAvatarText}>+{members.length - visibleMembersCount}</Text>
+                    </View>
+                    <Text style={[styles.memberUsername, darkMode && styles.darkText]}>See More</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
-          ))}
-          {members.length > 8 && (
-            <View style={styles.MembersItem}>
-              <Text style={{ fontSize: 24, fontWeight: "bold" }}>...</Text>
-            </View>
-          )}
-        </View>
+          </View>
 
-        <View style={styles.ButtonCon}>
-          <TouchableOpacity onPress={handleInvitePress}>
-            <Text style={styles.InviteBtn}>Invite People</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={styles.inviteButton}
+              onPress={handleInvitePress}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.inviteButtonText}>Invite People</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={HandleLeaveGroup}>
-            <Text style={styles.LeaveBtn}>Leave Group</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity 
+              style={styles.leaveButton}
+              onPress={HandleLeaveGroup}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.leaveButtonText}>Leave Group</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </SafeAreaView>
 
       {/* Edit Modal */}
@@ -428,6 +431,7 @@ export default function GroupChatPage() {
               value={editTitle}
               onChangeText={setEditTitle}
               placeholder="Enter group name"
+              placeholderTextColor={darkMode ? "#aaa" : "#999"}
             />
 
             <Text style={[styles.modalLabel, darkMode && styles.darkText]}>
@@ -438,6 +442,7 @@ export default function GroupChatPage() {
               value={editDescription}
               onChangeText={setEditDescription}
               placeholder="Enter description"
+              placeholderTextColor={darkMode ? "#aaa" : "#999"}
               multiline={true}
               numberOfLines={3}
             />
@@ -461,7 +466,7 @@ export default function GroupChatPage() {
         </View>
       </Modal>
 
-      {/* Simplified Invite Modal */}
+      {/* Invite Modal */}
       <Modal
         visible={inviteModalVisible}
         transparent={true}
@@ -486,6 +491,7 @@ export default function GroupChatPage() {
               value={inviteInput}
               onChangeText={setInviteInput}
               placeholder="Username"
+              placeholderTextColor={darkMode ? "#aaa" : "#999"}
               autoCapitalize="none"
             />
             
@@ -523,99 +529,201 @@ export default function GroupChatPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8f8f8",
+  },
+  darkContainer: {
+    backgroundColor: "#121212",
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 10,
-    backgroundColor: "#f0f0f0",
-    marginTop: 35,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    marginTop: Platform.OS === 'android' ? 35 : 0,
   },
-  Infoheader: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#cbcaca",
-    padding: 15,
+  darkHeader: {
+    backgroundColor: "#1e1e1e",
+    borderBottomColor: "#333",
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#f58814",
+  backButton: {
+    padding: 8,
   },
-  description: {
-    fontSize: 14,
-    color: "#595959",
-    fontWeight: "300",
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
   },
-  icon: {
-    width: 70,
-    height: 70,
-    borderRadius: 50,
-    marginBottom: 5,
+  darkText: {
+    color: "#f0f0f0",
+  },
+  editButton: {
+    padding: 8,
   },
   edit: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "500",
-    color: "#595959",
+    color: "#007bff",
   },
-  MembersCon: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 10,
-    columnGap: 5,
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
+  darkEdit: {
+    color: "#4da6ff",
+  },
+  infoHeader: {
+    alignItems: "center",
     backgroundColor: "#f0f0f0",
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
   },
-  Memberstitle: {
+  darkInfoHeader: {
+    backgroundColor: "#2a2a2a",
+    borderBottomColor: "#3d3d3d",
+  },
+  groupIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#f58814",
+    marginBottom: 6,
+  },
+  darkTitle: {
+    color: "#ff9c44",
+  },
+  description: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  darkDescription: {
+    color: "#aaa",
+  },
+  sectionContainer: {
+    padding: 16,
+  },
+  membersTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1c1c1c",
-    marginBottom: 10,
+    color: "#333",
+    marginBottom: 12,
+    paddingLeft: 4,
   },
-  MembersItem: {
-    width: "22%",
-    aspectRatio: 1,
-    flexDirection: "column",
+  membersGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 12,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  darkMembersGrid: {
+    backgroundColor: "#2a2a2a",
+  },
+  memberItem: {
+    width: "25%",
     alignItems: "center",
-    justifyContent: "center",
-    padding: 10,
-    borderRadius: 10,
-    fontSize: 17,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  memberAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: "#f0f0f0",
+  },
+  memberUsername: {
+    fontSize: 14,
+    color: "#333",
+    textAlign: "center",
     fontWeight: "500",
-  },
-  ButtonCon: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
     width: "100%",
-    rowGap: 10,
-    marginTop: 10,
   },
-  LeaveBtn: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-    padding: 10,
-    backgroundColor: "#ff0000",
-    borderRadius: 10,
-    width: 200,
+  moreAvatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#e0e0e0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
   },
-  InviteBtn: {
-    fontSize: 16,
+  moreAvatarText: {
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-    padding: 10,
+    color: "#666",
+  },
+  seeMoreButton: {
+    opacity: 0.8,
+  },
+  buttonContainer: {
+    padding: 16,
+    gap: 12,
+  },
+  inviteButton: {
     backgroundColor: "#2dffbf",
-    borderRadius: 10,
-    width: 200,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-
+  inviteButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+  },
+  leaveButton: {
+    backgroundColor: "#ff3b30",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  leaveButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -624,82 +732,88 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalView: {
-    width: "80%",
+    width: "85%",
     backgroundColor: "white",
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 16,
+    padding: 24,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   darkModalView: {
-    backgroundColor: "#333",
+    backgroundColor: "#2a2a2a",
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 15,
+    marginBottom: 20,
     textAlign: "center",
-  },
-  darkText: {
-    color: "white",
+    color: "#333",
   },
   modalLabel: {
     fontSize: 16,
-    marginBottom: 5,
+    marginBottom: 8,
+    fontWeight: "500",
+    color: "#444",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
+    backgroundColor: "#fafafa",
   },
   textArea: {
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
     height: 100,
     textAlignVertical: "top",
+    fontSize: 16,
+    backgroundColor: "#fafafa",
   },
   darkInput: {
     borderColor: "#555",
     color: "white",
+    backgroundColor: "#333",
   },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 12,
   },
   cancelButton: {
-    backgroundColor: "#f44336",
-    paddingVertical: 10,
+    backgroundColor: "#ff3b30",
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 5,
+    borderRadius: 8,
     flex: 1,
-    marginRight: 10,
     alignItems: "center",
   },
   saveButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 10,
+    backgroundColor: "#34c759",
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 5,
+    borderRadius: 8,
     flex: 1,
     alignItems: "center",
   },
   buttonText: {
     color: "white",
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontSize: 16,
   },
   disabledButton: {
-    backgroundColor: "#cccccc",
+    backgroundColor: "#999999",
     opacity: 0.7,
   },
 });

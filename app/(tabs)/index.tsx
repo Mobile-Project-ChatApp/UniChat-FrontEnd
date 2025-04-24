@@ -43,7 +43,7 @@ export default function HomeScreen() {
 
       // Apply search filter if needed
       if (searchText.trim()) {
-        const filteredRooms = chatRooms.filter((room:any) =>
+        const filteredRooms = chatRooms.filter((room: any) =>
           room.name.toLowerCase().includes(searchText.toLowerCase())
         );
         setGroups(filteredRooms);
@@ -107,16 +107,16 @@ export default function HomeScreen() {
     } else {
       loadOwnChatRooms();
     }
-  }, [user, activeFilter]); 
+  }, [user, activeFilter]);
 
   const toggleAllChats = () => {
     setActiveFilter("all");
-    setSearchText(""); 
+    setSearchText("");
   };
 
   const toggleOwnChats = () => {
     setActiveFilter("own");
-    setSearchText(""); 
+    setSearchText("");
   };
 
   useFocusEffect(
@@ -146,8 +146,7 @@ export default function HomeScreen() {
       <Header
         username={user?.username ?? "Guest"}
         avatar={
-          user?.profilePicture ??
-          require("@/assets/images/avatar/default-avatar.jpeg")
+          user?.profilePicture ?? require("@/assets/images/avatar/1.jpeg")
         }
         darkMode={darkMode}
         hasUnreadNotifications={hasUnread}
@@ -248,7 +247,10 @@ export default function HomeScreen() {
           console.log("New Group Created:", newGroup);
 
           // Add new group to both state arrays
-          const newGroupObject = { ...newGroup, id: parseInt(newGroup.id) } as GroupChat;
+          const newGroupObject = {
+            ...newGroup,
+            id: parseInt(newGroup.id),
+          } as GroupChat;
 
           setGroups((prevGroups) => [newGroupObject, ...prevGroups]);
           setAllGroups((prevGroups) => [newGroupObject, ...prevGroups]);

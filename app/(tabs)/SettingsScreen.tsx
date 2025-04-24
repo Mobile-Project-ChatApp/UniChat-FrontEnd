@@ -168,14 +168,14 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, darkMode && styles.darkText]}>
             Account
           </Text>
-          <SettingItem
+          {/* <SettingItem
             title="Online Status"
             isToggle={true}
             isOn={onlineStatus}
             onPress={() => setOnlineStatus(!onlineStatus)}
             icon="radio-button-on"
             darkMode={darkMode}
-          />
+          /> */}
           <SettingItem
             title="Private Profile"
             isToggle={true}

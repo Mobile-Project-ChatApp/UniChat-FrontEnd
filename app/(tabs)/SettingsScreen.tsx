@@ -61,8 +61,7 @@ export default function SettingsScreen() {
     useCallback(() => {
       // Reset private profile toggle to off every time screen is focused
       setPrivateProfile(false);
-      // Fetch invitations when screen is focused
-      fetchInvitations();
+      // fetchInvitations();
     }, [])
   );
 
@@ -79,10 +78,12 @@ export default function SettingsScreen() {
       
       if (!token) {
         console.error("No authentication token found");
+        Alert.alert("Error", "You are not logged in. Please log in and try again.");
         return;
       }
   
-      // Step 1: Get basic invitation data
+      console.log("Fetching invitations with auth token");
+  
       const invitationsResponse = await axios.get(
         `${API_BASE_URL}/api/Invitation/byUserId`,
         {
@@ -94,34 +95,32 @@ export default function SettingsScreen() {
   
       if (invitationsResponse.status === 200) {
         console.log("Fetched raw invitations:", invitationsResponse.data);
-        
-        // Step 2: Enhance invitations with sender names and chatroom names
+  
         const enhancedInvitations = await Promise.all(
           invitationsResponse.data.map(async (invitation: any) => {
-            // Make a copy of the invitation object
             const enhancedInvitation = { ...invitation };
-            
+  
             try {
               // Fetch chatroom details
               const chatroomResponse = await axios.get(
                 `${API_BASE_URL}/api/chatroom/${invitation.chatRoomId}`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              
+  
               if (chatroomResponse.status === 200) {
                 enhancedInvitation.chatRoomName = chatroomResponse.data.name || "Chat Group";
               }
-              
+  
               // Fetch sender details
               const senderResponse = await axios.get(
                 `${API_BASE_URL}/api/users/${invitation.senderId}`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              
+  
               if (senderResponse.status === 200) {
                 enhancedInvitation.senderName = senderResponse.data.username || "Unknown";
               }
-              
+  
               return enhancedInvitation;
             } catch (error) {
               console.log("Error enhancing invitation data:", error);
@@ -129,13 +128,26 @@ export default function SettingsScreen() {
             }
           })
         );
-        
+  
         console.log("Enhanced invitations with names:", enhancedInvitations);
         setInvitations(enhancedInvitations);
       }
     } catch (error) {
-      console.error("Error fetching invitations:", error);
-      Alert.alert("Error", "Failed to load invitations. Please try again later.");
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          // Handle 404 error gracefully
+          console.log("No invitations found.");
+          setInvitations([]); // Set invitations to an empty array
+        } else if (error.response?.status === 401) {
+          Alert.alert("Error", "Unauthorized. Please log in again.");
+        } else {
+          console.error("Error fetching invitations:", error);
+          Alert.alert("Error", "Failed to load invitations. Please try again later.");
+        }
+      } else {
+        console.error("Unexpected error fetching invitations:", error);
+        Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoadingInvitations(false);
     }
@@ -165,7 +177,6 @@ export default function SettingsScreen() {
 
       if (response.status === 200 || response.status === 204) {
         Alert.alert("Success", "Invitation accepted successfully!");
-        // Remove the accepted invitation from the list
         setInvitations(invitations.filter(inv => inv.id !== invitationId));
       }
     } catch (error) {
@@ -199,7 +210,6 @@ export default function SettingsScreen() {
 
       if (response.status === 200 || response.status === 204) {
         Alert.alert("Success", "Invitation declined successfully.");
-        // Remove the declined invitation from the list
         setInvitations(invitations.filter(inv => inv.id !== invitationId));
       }
     } catch (error) {

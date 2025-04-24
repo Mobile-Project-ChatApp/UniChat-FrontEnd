@@ -1,4 +1,5 @@
 import { ThemeContext } from "@/contexts/ThemeContext";
+import { AuthContext } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useContext, useEffect, useState } from "react";
@@ -33,6 +34,7 @@ const showToast = (message: string) => {
 
 export default function GroupChatPage() {
   const router = useRouter();
+  const { user: authUser } = useContext(AuthContext);
   const {
     roomId,
     icon,
@@ -144,12 +146,51 @@ export default function GroupChatPage() {
     }
 
     try {
+
+      const token = await AsyncStorage.getItem("accessToken") || 
+                   await AsyncStorage.getItem("authToken") || 
+                   await AsyncStorage.getItem("token");
+      
+      if (!token) {
+        console.error("No auth token found");
+        showToast("You need to be logged in");
+        return;
+      }
+      
+
+      if (!authUser || !authUser.id) {
+        console.error("No user found in AuthContext");
+        showToast("Authentication error. Please log in again.");
+        return;
+      }
+
+      const userId = authUser.id;
+      
+
+      const response = await axios.delete(
+        `${API_BASE_URL}/api/chatroom/${roomId}/users/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        }
+      );
+      
+      console.log(`User removed from room in database: ${response.status}`);
+      
+
       await connection.invoke("LeaveRoom", parseInt(roomId));
       console.log(`Left room ${roomId}`);
-      router.back(); // Navigate back after leaving the group
-      router.back();
+      
+      showToast("Left the group successfully");
+      
+      // Navigate back to the chatrooms list
+      router.push({
+        pathname: "/", 
+      });
     } catch (err) {
       console.error("Error leaving room:", err);
+      showToast("Failed to leave the group");
     }
   };
 
